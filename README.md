@@ -66,15 +66,16 @@ SeniorConnect/
 
 SeniorConnect is built with security in mind, following OWASP Top 10 practices:
 
-| OWASP 2019 Risk               | Implementation                                               |
-|------------------------------|--------------------------------------------------------------|
-| A1: Injection                | Safe query handling via parameterized queries                |
-| A2: Broken Authentication    | Flask-Login + Flask-Bcrypt                                   |
-| A3: Sensitive Data Exposure  | `.env` files, Bcrypt hashing, HTTPS-ready                    |
-| A5: Broken Access Control    | `@login_required`, role-based expansion planned              |
-| A6: Security Misconfiguration| Flask-Limiter, `debug=False` in production                   |
-| A8: Insecure Deserialization | JSON-safe deserialization planned for forms                  |
-| A10: Insufficient Logging    | Python `logging` module support planned                      |
+| OWASP 2021 Risk                       | Implementation                                               |
+|--------------------------------------|--------------------------------------------------------------|
+| A01: Broken Access Control           | `@login_required`, role-based expansion planned              |
+| A02: Cryptographic Failures          | `.env` files, Bcrypt hashing, HTTPS-ready                    |
+| A03: Injection                       | Safe query handling via parameterized queries                |
+| A04: Insecure Design                 | Planned security design practices (e.g., role-based logic)   |
+| A05: Security Misconfiguration       | Flask-Limiter, `debug=False` in production                   |
+| A07: Identification and Authentication Failures | Flask-Login + Flask-Bcrypt                     |
+| A08: Software and Data Integrity Failures | JSON-safe deserialization planned for forms           |
+| A09: Security Logging and Monitoring Failures | Python `logging` module support planned            |
 
 ---
 
