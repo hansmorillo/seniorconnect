@@ -84,7 +84,7 @@ SeniorConnect is built with security in mind, following OWASP Top 10 practices:
 
 1. Clone the repo:
     ```bash
-    git clone xxx
+    git clone https://github.com/hansmorillo/seniorconnect
     cd seniorconnect
     ```
 
@@ -104,7 +104,7 @@ SeniorConnect is built with security in mind, following OWASP Top 10 practices:
 ### 🧪 Run the App
 
 ```bash
-python app.py                  # if python is not recognised ..., and PATH is installed correctly, run 'py -m venv venv' and use py for all further use 
+python app.py                  # if python is not recognised ..., and PATH is installed correctly, run 'py app.py' and use py for all further use 
 ```
 
 ---
@@ -114,14 +114,12 @@ python app.py                  # if python is not recognised ..., and PATH is in
 - MySQL-backed login and user registration
 - Role-based access for admins vs seniors
 - Full calendar view for booking
-- Real-time chat with WebSockets
 
 ---
 
 ## 👨‍💻 Authors
 
 - Hans Morillo
-- SeniorConnect Development Team
 
 ---
 
