@@ -1,5 +1,14 @@
 {% extends "base.html" %}
+
 {% block content %}
-<h2>Register</h2>
-<p>Create a new account to access SeniorConnect features.</p>
+    <h2>Register</h2>
+    <form method="POST">
+        <input name="display_name" placeholder="Display Name" required><br>
+        <input name="email" type="email" placeholder="Email" required><br>
+        <input name="phone" placeholder="Phone Number" required><br>
+        <input name="password" type="password" placeholder="Password" required><br>
+        <button type="submit">Register</button>
+    </form>
+    <a href="{{ url_for('auth.login') }}">Already have an account? Login</a>
+    <p>Create a new account to access SeniorConnect features.</p>
 {% endblock %}
