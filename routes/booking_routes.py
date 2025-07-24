@@ -4,7 +4,7 @@ from flask_login import login_required
 booking = Blueprint('booking', __name__)
 
 @booking.route('/booking')
-@login_required
+# @login_required
 def booking_main():
     return render_template('booking.html')
 

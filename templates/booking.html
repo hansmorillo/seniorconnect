@@ -1,5 +1,375 @@
 {% extends "base.html" %}
 {% block content %}
-<h2>Location Booking</h2>
-<p>Start your booking process by selecting a category and location.</p>
+
+<!-- Banner -->
+<div class="banner-wrapper">
+  <img src="{{ url_for('static', filename='images/booking.jpg') }}" alt="Banner" class="banner-image">
+</div>
+
+<!-- Floating Form Wrapper -->
+<div class="form-overlay-wrapper px-0">
+  <div class="booking-form-wrapper d-flex flex-column">
+
+    <!-- Tabs -->
+    <div class="tab-container">
+      <div class="row gx-0">
+        <div class="col text-center"><a class="tab-box active-tab" id="tabLocation" data-tab="location">Location</a></div>
+        <div class="col text-center"><a class="tab-box" id="tabDatetime" data-tab="datetime">Date & Time</a></div>
+        <div class="col text-center"><a class="tab-box" id="tabDetails" data-tab="details">Event Details</a></div>
+        <div class="col text-center"><a class="tab-box" id="tabOrganiser" data-tab="organiser">Organiser</a></div>
+        <div class="col text-center"><a class="tab-box" id="tabConfirmation" data-tab="confirmation">Confirmation</a></div>
+      </div>
+    </div>
+
+    <!-- Progress Indicator -->
+    <div class="progress-steps-container mt-5 mb-4 px-5">  
+      <div class="progress-line position-relative" style="height: 6px; background-color: #e0e0e0; border-radius: 3px;">
+        <div class="progress-fill" id="progressFill" style="position: absolute; top: 0; left: 0; height: 6px; background-color: #0d6efd; border-radius: 3px; width: 0%; transition: width 0.4s ease;"></div>
+        <div class="d-flex justify-content-between position-absolute w-100" style="top: -12px;">
+          {% for i in range(5) %}
+            <div class="step-circle" id="stepCircle{{ i }}"></div>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+
+    <!-- Location Section -->
+    <div id="locationSection" class="flex-grow-1 d-flex align-items-start justify-content-center flex-column pt-5 pb-4">
+    <div class="container text-center mt-4">
+        <div class="row justify-content-center">
+        <!-- Card 1 -->
+        <div class="col-md-3 mx-4 custom-card">
+            <img src="{{ url_for('static', filename='images/sports_hall.jpg') }}" class="rounded-circle card-img-top mb-3" alt="Sports Hall" style="width: 100px; height: 100px; object-fit: cover;">
+            <h5>Indoor Sports Hall</h5>
+            <button class="btn btn-outline-dark btn-sm mb-1" data-bs-toggle="modal" data-bs-target="#locationInfoModal">More info</button>
+            <p class="mb-2">For Large-scale Events</p>
+            <button class="btn btn-outline-primary btn-sm select-btn">Select</button>
+        </div>
+
+        <!-- Card 2 -->
+        <div class="col-md-3 mx-4 custom-card">
+            <img src="{{ url_for('static', filename='images/function_room.jpg') }}" class="rounded-circle card-img-top mb-3" alt="Function Room" style="width: 100px; height: 100px; object-fit: cover;">
+            <h5>Function Room</h5>
+            <button class="btn btn-outline-dark btn-sm mb-1" data-bs-toggle="modal" data-bs-target="#locationInfoModal">More info</button>
+            <p class="mb-2">For Small-scale Events</p>
+            <button class="btn btn-outline-primary btn-sm select-btn">Select</button>
+        </div>
+
+        <!-- Card 3 -->
+        <div class="col-md-3 mx-4 custom-card">
+            <img src="{{ url_for('static', filename='images/multipurpose.jpg') }}" class="rounded-circle card-img-top mb-3" alt="Multipurpose Hall" style="width: 100px; height: 100px; object-fit: cover;">
+            <h5>Multi-purpose Hall</h5>
+            <button class="btn btn-outline-dark btn-sm mb-1" data-bs-toggle="modal" data-bs-target="#locationInfoModal">More info</button>
+            <p class="mb-2">For Medium-scale Events</p>
+            <button class="btn btn-outline-primary btn-sm select-btn">Select</button>
+        </div>
+        </div>
+
+        <!-- Continue Button -->
+        <div class="mt-5">
+        <button id="continueBtn" class="btn btn-custom-continue rounded-pill px-5 py-2 fs-5">Continue</button>
+        <div id="errorMsg" class="text-danger mt-2 d-none">Please select a location first.</div>
+        </div>
+    </div>
+    </div>
+
+
+    <!-- Date & Time Section -->
+    <div id="datetimeSection" class="d-none flex-grow-1 pt-5 pb-4">
+        <div class="container">
+
+            <!-- Date Selection -->
+            <div class="mb-5">
+                <label class="fw-bold mb-2">Select a Date</label>
+                <input type="date" id="datePicker" class="form-control w-auto">
+            </div>
+
+            <!-- Time Slot Selection -->
+            <div>
+              <label class="fw-bold mb-3 d-block">Select a Time Slot</label>
+
+              <!-- Dynamic container -->
+              <div id="timeSlotContainer">
+                <!-- Morning -->
+                <div id="morningSlots" class="mb-3 d-none">
+                    <div class="fw-semibold mb-2">Morning</div>
+                    <div class="d-flex flex-wrap gap-3" id="morningSlotButtons"></div>
+                </div>
+
+                <!-- Afternoon -->
+                <div id="afternoonSlots" class="mb-3 d-none">
+                    <div class="fw-semibold mb-2">Afternoon</div>
+                    <div class="d-flex flex-wrap gap-3" id="afternoonSlotButtons"></div>
+                </div>
+
+                <!-- Evening -->
+                <div id="eveningSlots" class="mb-3 d-none">
+                    <div class="fw-semibold mb-2">Evening</div>
+                    <div class="d-flex flex-wrap gap-3" id="eveningSlotButtons"></div>
+                </div>
+            </div>
+        </div>
+            <!-- Continue Button -->
+            <div class="mt-5 text-center">
+                <button id="datetimeContinueBtn" class="btn btn-custom-continue rounded-pill px-5 py-2 fs-5">Continue</button>
+            </div>
+
+        </div>
+    </div>
+
+<!-- Location Info Modal -->
+<div class="modal fade" id="locationInfoModal" tabindex="-1" aria-labelledby="locationInfoModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg modal-dialog-centered">
+    <div class="modal-content p-5">
+      <div class="d-flex justify-content-between align-items-center mb-3">
+        <h5 id="locationInfoModalLabel" class="fw-bold mb-0">Location Title</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+
+      <div class="row gx-4 mb-3">
+        <div class="col-md-6">
+          <img id="locationInfoImage" src="" alt="Location Image" class="img-fluid rounded" style="object-fit: cover; width: 100%;">
+        </div>
+        <div class="col-md-6 text-start">
+          <h6 class="fw-bold fs-6">Venue Overview:</h6>
+          <ul class="mb-0 ps-3" id="venueOverview"></ul>
+        </div>
+      </div>
+
+      <div class="row">
+        <div class="col-12 text-start">
+          <h6 class="fw-bold mt-4 fs-6">Facilities Available:</h6>
+          <ul class="row ps-3" id="facilitiesList" style="list-style-type: disc; padding-left: 1.5rem;"></ul>
+
+          <h6 class="fw-bold mt-4 fs-6">Booking Guidelines:</h6>
+          <ul class="ps-3" id="bookingGuidelines" style="list-style-type: disc;"></ul>
+
+          <h6 class="fw-bold mt-4 fs-6">Suggestions for Best Use:</h6>
+          <p id="bestUseText" class="mb-0"></p>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+  const continueBtn = document.getElementById("continueBtn");
+  const errorMsg = document.getElementById("errorMsg");
+  const locationSection = document.getElementById("locationSection");
+  const datetimeSection = document.getElementById("datetimeSection");
+  const stepCircles = [...Array(5).keys()].map(i => document.getElementById(`stepCircle${i}`));
+  const progressFill = document.getElementById("progressFill");
+
+  const tabLocation = document.querySelector('[data-tab="location"]');
+  const tabDatetime = document.querySelector('[data-tab="datetime"]');
+
+  const selectButtons = document.querySelectorAll(".select-btn");
+  const cards = document.querySelectorAll(".custom-card");
+
+  let currentStep = 0;
+  let progressValue = 0;
+
+  let locationSelected = false;
+  let dateSelected = false;
+  let timeSelected = false;
+
+  // Initial state
+  stepCircles[0].classList.add("active");
+  progressFill.style.width = "0%";
+
+  function updateProgressBar() {
+  if (currentStep === 0) {
+    progressFill.style.width = locationSelected ? "20%" : "0%";
+  } else if (currentStep === 1) {
+    if (dateSelected && timeSelected) {
+      progressFill.style.width = "40%";
+    } else if (dateSelected) {
+      progressFill.style.width = "30%";
+    } else {
+      progressFill.style.width = "25%";  // Moved to Date & Time, but no selection yet
+    }
+  } else if (currentStep === 2) {
+    progressFill.style.width = "60%";
+  } else if (currentStep === 3) {
+    progressFill.style.width = "80%";
+  } else if (currentStep === 4) {
+    progressFill.style.width = "100%";
+  }
+}
+
+
+
+  function updateStepCircles() {
+    stepCircles.forEach((circle, index) => {
+      if (index <= currentStep) {
+        circle.classList.add("active");
+      } else {
+        circle.classList.remove("active");
+      }
+    });
+  }
+
+  function updateTabs(activeTab) {
+    document.querySelectorAll(".tab-box").forEach(tab => {
+      tab.classList.remove("active-tab");
+    });
+    activeTab.classList.add("active-tab");
+  }
+
+  function showSection(step) {
+    locationSection.classList.add("d-none");
+    datetimeSection.classList.add("d-none");
+
+    if (step === 0) locationSection.classList.remove("d-none");
+    if (step === 1) datetimeSection.classList.remove("d-none");
+
+    updateStepCircles();
+    updateProgressBar();
+  }
+
+  // Location select logic
+  selectButtons.forEach(btn => {
+    btn.addEventListener("click", () => {
+      cards.forEach(card => {
+        const buttons = card.querySelectorAll(".btn");
+        buttons[1].classList.remove("btn-primary");
+        buttons[1].classList.add("btn-outline-primary");
+        buttons[1].textContent = "Select";
+      });
+
+      btn.classList.remove("btn-outline-primary");
+      btn.classList.add("btn-primary");
+      btn.textContent = "Selected";
+      locationSelected = true;
+      errorMsg.classList.add("d-none");
+      updateProgressBar();
+    });
+  });
+
+  // Continue button (Location -> Date & Time)
+  continueBtn.addEventListener("click", () => {
+    if (currentStep === 0 && !locationSelected) {
+      errorMsg.classList.remove("d-none");
+      return;
+    }
+
+    if (currentStep === 0) {
+      currentStep = 1;
+      showSection(currentStep);
+      updateTabs(tabDatetime);
+    }
+  });
+
+  // Tab to go back to Location
+  tabLocation.addEventListener("click", () => {
+    currentStep = 0;
+    showSection(currentStep);
+    updateTabs(tabLocation);
+  });
+
+  // Fake logic for Date and Time pickers (simulate with buttons or inputs)
+  const fakeDateBtn = document.getElementById("fakeDate");
+  const fakeTimeBtn = document.getElementById("fakeTime");
+  const datetimeContinueBtn = document.getElementById("datetimeContinue");
+
+  if (fakeDateBtn) {
+    fakeDateBtn.addEventListener("click", () => {
+      dateSelected = true;
+      updateProgressBar();
+    });
+  }
+
+  if (fakeTimeBtn) {
+    fakeTimeBtn.addEventListener("click", () => {
+      timeSelected = true;
+      updateProgressBar();
+    });
+  }
+
+  if (datetimeContinueBtn) {
+    datetimeContinueBtn.addEventListener("click", () => {
+      if (!(dateSelected && timeSelected)) return;
+
+      currentStep = 2;
+      updateStepCircles();
+      updateProgressBar();
+      // Add logic to show next section
+    });
+  }
+
+  const timeSlots = {
+    "Indoor Sports Hall": [
+        { label: "8:00 AM – 10:00 AM", period: "morning" },
+        { label: "10:30 AM – 12:30 PM", period: "morning" },
+        { label: "1:00 PM – 3:00 PM", period: "afternoon" },
+        { label: "3:30 PM – 5:30 PM", period: "afternoon" },
+        { label: "6:00 PM – 8:00 PM", period: "evening" },
+        { label: "8:30 PM – 10:30 PM", period: "evening" }
+    ],
+    "Function Room": [
+        { label: "8:00 AM – 9:00 AM", period: "morning" },
+        { label: "9:30 AM – 10:30 AM", period: "morning" },
+        { label: "11:00 AM – 12:00 PM", period: "morning" },
+        { label: "12:30 PM – 1:30 PM", period: "afternoon" },
+        { label: "2:00 PM – 3:00 PM", period: "afternoon" },
+        { label: "3:30 PM – 4:30 PM", period: "afternoon" },
+        { label: "5:00 PM – 6:00 PM", period: "evening" },
+        { label: "6:30 PM – 7:30 PM", period: "evening" },
+        { label: "8:00 PM – 9:00 PM", period: "evening" },
+    ],
+    "Multi-purpose Hall": [
+        { label: "8:00 AM – 9:30 AM", period: "morning" },
+        { label: "9:45 AM – 11:15 AM", period: "morning" },
+        { label: "11:30 AM – 1:00 PM", period: "morning" },
+        { label: "1:15 PM – 2:45 PM", period: "afternoon" },
+        { label: "3:00 PM – 4:30 PM", period: "afternoon" },
+        { label: "4:45 PM – 6:15 PM", period: "afternoon" },
+        { label: "6:30 PM – 8:00 PM", period: "evening" },
+        { label: "8:15 PM – 9:45 PM", period: "evening" }
+    ]
+    };
+
+    let selectedLocationName = null;
+
+    selectButtons.forEach(btn => {
+    btn.addEventListener("click", () => {
+        selectedLocationName = btn.closest(".custom-card").querySelector("h5").innerText;
+        populateTimeSlots(selectedLocationName);
+    });
+    });
+
+    function populateTimeSlots(location) {
+    const slots = timeSlots[location];
+    const sections = {
+        morning: document.getElementById("morningSlotButtons"),
+        afternoon: document.getElementById("afternoonSlotButtons"),
+        evening: document.getElementById("eveningSlotButtons")
+    };
+
+    // Clear existing and hide
+    Object.keys(sections).forEach(period => {
+        sections[period].innerHTML = "";
+        document.getElementById(period + "Slots").classList.add("d-none");
+    });
+
+    // Add buttons for current location
+    slots.forEach(slot => {
+        const btn = document.createElement("button");
+        btn.className = "btn btn-outline-dark time-slot";
+        btn.innerText = slot.label;
+        btn.addEventListener("click", () => {
+        document.querySelectorAll(".time-slot").forEach(b => b.classList.remove("btn-primary"));
+        btn.classList.add("btn-primary");
+        timeSelected = true;
+        updateProgressBar();
+        });
+        sections[slot.period].appendChild(btn);
+        document.getElementById(slot.period + "Slots").classList.remove("d-none");
+    });
+    }
+});
+
+</script>
+
 {% endblock %}

@@ -1,0 +1,242 @@
+body, html {
+  margin: 0;
+  padding: 0;
+  overflow-x: hidden;
+}
+
+/* === BOOKING PAGE === */
+.banner-wrapper {
+  width: 100%;
+  padding: 0;
+  margin: 0;
+  overflow: hidden;
+}
+
+.banner-image {
+  width: 100%;
+  height: 500px;
+  object-fit: cover;
+  display: block;
+}
+
+.form-overlay-wrapper {
+  position: relative;
+  top: -100px;
+  display: flex;
+  justify-content: center;
+  margin-bottom: -100px;
+}
+
+.booking-form-wrapper {
+  background-color: #fff;
+  border-radius: 20px 20px 0 0;
+  padding: 3rem 2rem 3rem; /* more bottom padding */
+  margin: 0;
+  width: 100%;
+  max-width: 1100px;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+  overflow: hidden;
+  min-height: 80vh; /* extend beyond viewport */
+}
+
+/* === TABS === */
+.tab-container {
+  margin: 0;
+  padding: 0;
+  border-radius: 16px 16px 0 0;
+  overflow: hidden;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+  background-color: #ffffff;
+}
+
+.tab-container .row {
+  margin: 0;
+}
+
+.tab-box {
+  display: block;
+  width: 100%;
+  text-align: center;
+  padding: 24px 0; /* taller for easier clicking */
+  font-weight: 500;
+  font-size: 20px;  /* BIGGER FONT for visibility */
+  color: #000;
+  text-decoration: none;
+  border-right: 1px solid #e0e0e0;
+  background-color: #fff;
+  transition: background-color 0.2s ease;
+  cursor: pointer;
+}
+
+.tab-box:last-child {
+  border-right: none;
+}
+
+.tab-box:hover {
+  background-color: #f7f9fc;
+}
+
+.active-tab {
+  background-color: #f1f8ff;
+  font-weight: 600;
+}
+
+/* === Progress bar === */
+.progress-steps-container {
+  position: relative;
+}
+
+.step-circle {
+  width: 24px;
+  height: 24px;
+  background-color: white;
+  border: 3px solid #e0e0e0;
+  border-radius: 50%;
+  z-index: 2;
+}
+
+.step-circle.active {
+  border-color: #0d6efd;
+  background-color: #0d6efd;
+}
+
+/* === CARDS === */
+.custom-card {
+  background-color: #f8f9fa;
+  border-radius: 1rem;
+  padding: 1.5rem 1rem;
+  transition: 0.3s ease;
+}
+
+.custom-card:hover {
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.15);
+}
+
+.custom-card.selected {
+  border: 2px solid #0d6efd;
+  background-color: #e9f3ff;
+}
+
+.custom-card img {
+  margin-bottom: 1.5rem;
+}
+
+.custom-card h5 {
+  margin-bottom: 1.2rem;
+  font-size: 1.25rem;
+}
+
+.custom-card .btn-outline-dark {
+  margin-bottom: 1rem;
+}
+
+.custom-card p {
+  margin-bottom: 1rem;
+  font-size: 1.1rem;
+}
+
+.custom-card .btn-outline-primary,
+.custom-card .btn-primary {
+  margin-top: 1rem;
+}
+/* === BUTTONS === */
+.btn-outline-dark.btn-sm {
+  border-radius: 50px;
+  font-size: 1rem;
+  padding: 6px 16px;
+}
+
+.btn-outline-primary.btn-sm,
+.btn-primary.btn-sm {
+  font-size: 1rem;
+  padding: 10px 0;
+  border-radius: 25px;
+  width: 80%;
+  display: block;
+  margin: 0 auto;
+}
+
+.btn-outline-primary.btn-sm {
+  color: #186FAF;
+  border: 2px solid #186FAF;
+  background-color: white;
+}
+
+.btn-outline-primary.btn-sm:hover {
+  background-color: #e6f0fa; /* light blue background on hover */
+  color: #186FAF;
+  border-color: #186FAF;
+}
+
+.btn-primary.btn-sm {
+  background-color: #186FAF;
+  border-color: #186FAF;
+  color: white;
+}
+
+.btn-primary.px-5.py-2 {
+  border-radius: 40px; /* rounder button */
+}
+
+.btn-custom-continue {
+  background-color: #186FAF;
+  border-color: #186FAF;
+  color: white;
+}
+
+.btn-custom-continue:hover {
+  background-color: #145c94; /* slightly darker for hover effect */
+  border-color: #145c94;
+}
+
+.modal-content {
+  max-width: 700px;
+  margin: auto;
+  padding: 2rem;
+  border-radius: 16px;
+}
+
+.modal-body ul {
+  padding-left: 1rem;
+  list-style-type: disc;
+}
+.modal-body li {
+  margin-bottom: 0.5rem;
+}
+.modal-body h6 {
+  margin-top: 1rem;
+}
+
+#facilitiesList {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 2rem; /* row-gap, column-gap */
+  padding-left: 1.2rem; /* ensures bullet alignment */
+  margin: 0;
+}
+
+#facilitiesList li {
+  list-style-type: disc;
+  list-style-position: outside;
+  flex: 0 0 45%; /* two columns */
+  white-space: nowrap;
+}
+
+/* Location name (modal title) */
+#locationInfoModalLabel {
+  font-size: 1.6rem; /* slightly bigger */
+}
+
+/* Section headers like "Facilities Available", "Booking Guidelines", etc. */
+#locationInfoModal h6 {
+  font-size: 1.1rem;
+  margin-top: 1.5rem; /* optional: add space between sections */
+}
+
+.modal {
+  z-index: 1050 !important;
+}
+
+.modal-backdrop {
+  z-index: 1040 !important;
+}

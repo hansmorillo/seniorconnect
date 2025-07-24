@@ -1,33 +1,140 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <title>SeniorConnect</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <meta charset="UTF-8">
+  <title>SeniorConnect</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
 </head>
+
 <body>
-    <nav class="navbar navbar-expand-lg navbar-dark bg-dark mb-4">
-        <div class="container-fluid">
-            <a class="navbar-brand" href="/">SeniorConnect</a>
-            <div class="collapse navbar-collapse">
-                <ul class="navbar-nav ms-auto">
-                    {% if current_user.is_authenticated %}
-                        <li class="nav-item"><a class="nav-link" href="/events">Events</a></li>
-                        <li class="nav-item"><a class="nav-link" href="/rsvp">RSVP</a></li>
-                        <li class="nav-item"><a class="nav-link" href="/logout">Logout</a></li>
-                    {% else %}
-                        <li class="nav-item"><a class="nav-link" href="/about">About Us</a></li>
-                        <li class="nav-item"><a class="nav-link" href="/register">Register</a></li>
-                        <li class="nav-item"><a class="nav-link" href="/login">Login</a></li>
-                    {% endif %}
-                </ul>
-            </div>
-        </div>
-    </nav>
-
-
-    <div class="container">
-        {% block content %}{% endblock %}
+  <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+    <div class="container-fluid">
+      <a class="navbar-brand" href="/">SeniorConnect</a>
+      <div class="collapse navbar-collapse">
+        <ul class="navbar-nav ms-auto">
+          {% if current_user.is_authenticated %}
+            <li class="nav-item"><a class="nav-link" href="/events">Events</a></li>
+            <li class="nav-item"><a class="nav-link" href="/rsvp">RSVP</a></li>
+            <li class="nav-item"><a class="nav-link" href="/logout">Logout</a></li>
+          {% else %}
+            <li class="nav-item"><a class="nav-link" href="/about">About Us</a></li>
+            <li class="nav-item"><a class="nav-link" href="/register">Register</a></li>
+            <li class="nav-item"><a class="nav-link" href="/login">Login</a></li>
+          {% endif %}
+        </ul>
+      </div>
     </div>
+  </nav>
+
+  {% block content %}{% endblock %}
+
+  <!-- Bootstrap JS (needed for modal) -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+  <!-- Custom JS -->
+  <script>
+  document.addEventListener("DOMContentLoaded", function () {
+    const cards = document.querySelectorAll(".custom-card");
+    const modal = new bootstrap.Modal(document.getElementById("locationInfoModal"));
+    const modalTitle = document.getElementById("locationInfoModalLabel");
+    const modalImage = document.getElementById("locationInfoImage");
+    const venueOverview = document.getElementById("venueOverview");
+    const facilitiesList = document.getElementById("facilitiesList");
+    const bookingGuidelines = document.getElementById("bookingGuidelines");
+    const bestUseText = document.getElementById("bestUseText");
+    const progressFill = document.querySelector(".progress-fill");
+
+    const locationData = {
+      "Indoor Sports Hall": {
+        image: "/static/images/sports_hall.jpg",
+        overview: [
+          "Capacity: Up to 500 people",
+          "Suitable for: Sports tournaments, school assemblies, large community events",
+          "Room Layout: Court with retractable stage"
+        ],
+        facilities: [
+          "Air-conditioned", "Retractable bleachers", "Stage & PA system", "Sports flooring"
+        ],
+        guidelines: [
+          "Minimum booking: 2 hours",
+          "Available from 8:00 AM to 10:00 PM",
+          "Bookings not available on public holidays"
+        ],
+        bestUse: "The Indoor Sports Hall is ideal for large-scale activities such as sports meets, interschool competitions, or community carnivals."
+      },
+      "Function Room": {
+        image: "/static/images/function_room.jpg",
+        overview: [
+          "Capacity: Up to 40 people",
+          "Suitable for: Workshops, interest group meetings, small family events",
+          "Room Layout: Flexible (theatre or classroom)"
+        ],
+        facilities: [
+          "Air-conditioned", "Projector + retractable screen", "Whiteboard & flip chart", "Wi-Fi & wheelchair accessible"
+        ],
+        guidelines: [
+          "Minimum booking: 1 hour",
+          "Available from 9:00 AM to 9:00 PM",
+          "Bookings not allowed on public holidays"
+        ],
+        bestUse: "This room is ideal for intimate sessions like book clubs, workshops, or family planning discussions in a quiet and professional setting."
+      },
+      "Multi-purpose Hall": {
+        image: "/static/images/multipurpose.jpg",
+        overview: [
+          "Capacity: Up to 150 people",
+          "Suitable for: Medium-scale events like performances, talks, or celebrations",
+          "Room Layout: Flexible seating and stage arrangement"
+        ],
+        facilities: [
+          "Lighting & sound system", "Air-conditioned", "Stackable chairs", "Stage options"
+        ],
+        guidelines: [
+          "Minimum booking: 1.5 hours",
+          "Available 10:00 AM – 9:30 PM",
+          "Pre-booking required for weekend slots"
+        ],
+        bestUse: "Best for talent shows, school concerts, mid-sized events like festive celebrations and community showcases."
+      }
+    };
+
+    cards.forEach(card => {
+      const [moreInfoBtn, selectBtn] = card.querySelectorAll(".btn");
+
+      selectBtn.addEventListener("click", () => {
+        cards.forEach(c => {
+          const [_, selBtn] = c.querySelectorAll(".btn");
+          c.classList.remove("selected");
+          selBtn.classList.remove("btn-primary");
+          selBtn.classList.add("btn-outline-primary");
+          selBtn.textContent = "Select";
+        });
+
+        card.classList.add("selected");
+        selectBtn.classList.remove("btn-outline-primary");
+        selectBtn.classList.add("btn-primary");
+        selectBtn.textContent = "Selected";
+
+        progressFill.style.width = "20%";
+      });
+
+      moreInfoBtn.addEventListener("click", () => {
+        const title = card.querySelector("h5").textContent.trim();
+        const info = locationData[title];
+
+        modalTitle.textContent = title;
+        modalImage.src = info.image;
+
+        venueOverview.innerHTML = info.overview.map(i => `<li>${i}</li>`).join("");
+        facilitiesList.innerHTML = info.facilities.map(i => `<li>${i}</li>`).join("");
+        bookingGuidelines.innerHTML = info.guidelines.map(i => `<li>${i}</li>`).join("");
+        bestUseText.textContent = info.bestUse;
+
+        modal.show();
+      });
+    });
+  });
+</script>
 </body>
 </html>
