@@ -1,7 +1,7 @@
 from flask import Blueprint, render_template, request, redirect, flash, url_for
 from flask_login import login_user, logout_user, login_required
 from models.user import User
-from extensions import db, bcrypt  # using shared instances from extensions.py
+from extensions import db, bcrypt, limiter  # using shared instances from extensions.py
 import uuid
 from forms.auth_forms import LoginForm, RegisterForm
 
@@ -45,6 +45,7 @@ def register():
     return render_template('register.html', form=form)
 
 @auth.route('/login', methods=['GET', 'POST'])
+@limiter.limit("5 per minute")  # Rate limit login attempts
 def login():
     form = LoginForm()
 
@@ -60,14 +61,14 @@ def login():
         if user and bcrypt.check_password_hash(user.password_hash, password):
             login_user(user, remember=remember)
             flash('Logged in successfully!', 'success')
-            return redirect(url_for('home'))  # Change 'home' to your actual route name
+            return redirect(url_for('home'))  # 
         else:
             flash('Invalid email or password.', 'danger')
 
     return render_template('login.html', form=form)
 
 
-@auth.route('/logout')
+@auth.route('/logout', methods=['POST'])
 @login_required
 def logout():
     logout_user()
