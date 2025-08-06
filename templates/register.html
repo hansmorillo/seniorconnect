@@ -3,6 +3,7 @@
 {% block content %}
     <h2>Register</h2>
     <form method="POST">
+        {{ form.hidden_tag() }} <!-- CSRF token for Flask-WTF validation -->
         <input name="display_name" placeholder="Display Name" required><br>
         <input name="email" type="email" placeholder="Email" required><br>
         <input name="phone" placeholder="Phone Number" required><br>

@@ -1,8 +1,9 @@
 from flask import Flask, render_template
 from dotenv import load_dotenv
+from datetime import timedelta
 import os
 
-from extensions import db, bcrypt, login_manager
+from extensions import db, bcrypt, login_manager, limiter
 from routes.auth_routes import auth
 from routes.event_routes import event
 from routes.user_routes import user
@@ -28,11 +29,26 @@ def create_app():
     bcrypt.init_app(app)
     login_manager.init_app(app)
     login_manager.login_view = 'auth.login'
+    # CSRF 
+    app.config['WTF_CSRF_ENABLED'] = True  # Enable CSRF protection using Flask-WTF
+    # Session & Cookie Configuration
+    app.config['SESSION_COOKIE_SECURE'] = True # Only send cookies via HTTPS
+    app.config['SESSION_COOKIE_HTTPONLY'] = True  # Prevent JavaScript access to cookies
+    app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'  # CSRF protection
+    # Rate Limiting
+    limiter.init_app(app)
+    # Remember Me / Stay Logged In
+    app.config['REMEMBER_COOKIE_DURATION'] = timedelta(days=7)
+    app.config['REMEMBER_COOKIE_SECURE'] = True
+    app.config['REMEMBER_COOKIE_HTTPONLY'] = True
+    app.config['REMEMBER_COOKIE_SAMESITE'] = 'Lax'
+
 
     # ---------- User Loader ----------
     @login_manager.user_loader
-    def load_user(user_id):
-        return User.query.get(user_id)
+    def load_user(user_id: str):
+        session = db.session
+        return session.get(User, user_id)  # SQLAlchemy API get method
 
     # ---------- Register Blueprints ----------
     app.register_blueprint(auth)

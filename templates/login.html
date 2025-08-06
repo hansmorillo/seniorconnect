@@ -9,8 +9,12 @@
 <body>
     <h2>Login</h2>
     <form method="POST">
+        {{ form.hidden_tag() }} <!-- CSRF token for Flask-WTF validation -->
         <input name="email" type="email" placeholder="Email" required><br>
         <input name="password" type="password" placeholder="Password" required><br>
+        <label>
+            <input type="checkbox" name="remember"> Remember Me
+        </label>
         <button type="submit">Login</button>
     </form>
     <a href="{{ url_for('auth.register') }}">Don't have an account? Register</a>
