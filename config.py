@@ -1,7 +1,8 @@
+from urllib.parse import quote_plus
 import os
 
 DB_USER = os.getenv('DB_USER', 'root')
-DB_PASSWORD = os.getenv('DB_PASSWORD', 'yourpassword')
+DB_PASSWORD = quote_plus(os.getenv('DB_PASSWORD', 'yourpassword'))
 DB_HOST = os.getenv('DB_HOST', 'localhost')
 DB_NAME = os.getenv('DB_NAME', 'seniorconnect')
 
