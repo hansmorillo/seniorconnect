@@ -28,6 +28,7 @@ SeniorConnect/
 ├── static/                 # CSS, images, scripts
 ├── db/                     # SQL schema and seed files
 ├── forms/                  # Form folder to separate from routes and models
+├── uploads/                # Uploads folder to store images for events
 ├── requirements.txt        # Python dependencies
 ├── .env                    # Secret keys and DB credentials (not committed)
 └── README.md

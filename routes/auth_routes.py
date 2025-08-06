@@ -61,7 +61,7 @@ def login():
         if user and bcrypt.check_password_hash(user.password_hash, password):
             login_user(user, remember=remember)
             flash('Logged in successfully!', 'success')
-            return redirect(url_for('home'))  # 
+            return redirect(url_for('home'))  
         else:
             flash('Invalid email or password.', 'danger')
 

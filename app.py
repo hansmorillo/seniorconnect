@@ -3,7 +3,7 @@ from dotenv import load_dotenv
 from datetime import timedelta
 import os
 
-from extensions import db, bcrypt, login_manager, limiter
+from extensions import db, bcrypt, login_manager, limiter, csrf
 from routes.auth_routes import auth
 from routes.event_routes import event
 from routes.user_routes import user
@@ -30,6 +30,7 @@ def create_app():
     login_manager.init_app(app)
     login_manager.login_view = 'auth.login'
     # CSRF 
+    csrf.init_app(app)  # Initialize CSRF protection with Flask-WTF
     app.config['WTF_CSRF_ENABLED'] = True  # Enable CSRF protection using Flask-WTF
     # Session & Cookie Configuration
     app.config['SESSION_COOKIE_SECURE'] = True # Only send cookies via HTTPS
