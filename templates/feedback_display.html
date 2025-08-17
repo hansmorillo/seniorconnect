@@ -1,0 +1,602 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="container mt-5">
+    <div class="feedback-header mb-5">
+        <div class="d-flex justify-content-between align-items-center">
+            <div>
+                <h2 class="fw-bold text-primary mb-2">
+                    <i class="fas fa-chart-line me-3"></i>User Feedback Dashboard
+                </h2>
+                <p class="text-muted mb-0">Monitor and analyze user feedback submissions</p>
+            </div>
+            <div class="header-stats">
+                <div class="stat-card">
+                    <div class="stat-number">{{ feedback_list|length if feedback_list else 0 }}</div>
+                    <div class="stat-label">Total Submissions</div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    {% if not feedback_list %}
+        <div class="empty-state">
+            <div class="text-center">
+                <div class="empty-icon mb-4">
+                    <i class="fas fa-inbox"></i>
+                </div>
+                <h4 class="text-primary mb-3">No Feedback Yet</h4>
+                <p class="text-muted mb-4">When users submit feedback, it will appear here for your review.</p>
+                <div class="empty-actions">
+                    <a href="{{ url_for('user.feedback') }}" class="btn btn-outline-primary btn-rounded">
+                        <i class="fas fa-plus me-2"></i>View Feedback Form
+                    </a>
+                </div>
+            </div>
+        </div>
+    {% else %}
+        <div class="feedback-table-container">
+            <div class="table-header mb-3">
+                <div class="d-flex justify-content-between align-items-center">
+                    <h5 class="text-primary mb-0">
+                        <i class="fas fa-table me-2"></i>Feedback Submissions
+                    </h5>
+                </div>
+            </div>
+            
+            <div class="table-responsive">
+                <table class="table feedback-table">
+                    <thead>
+                        <tr>
+                            <th style="width: 15%">
+                                <i class="fas fa-user me-2"></i>Name
+                            </th>
+                            <th style="width: 20%">
+                                <i class="fas fa-envelope me-2"></i>Email
+                            </th>
+                            <th style="width: 15%">
+                                <i class="fas fa-tag me-2"></i>Subject
+                            </th>
+                            <th style="width: 30%">
+                                <i class="fas fa-comment-alt me-2"></i>Feedback
+                            </th>
+                            <th style="width: 10%">
+                                <i class="fas fa-calendar me-2"></i>Date
+                            </th>
+                            <th style="width: 10%" class="text-center">
+                                <i class="fas fa-cog me-2"></i>Actions
+                            </th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for feedback in feedback_list %}
+                        <tr class="feedback-row" data-feedback-id="{{ feedback.id }}">
+                            <td class="name-cell">
+                                <div class="user-info">
+                                    <div class="user-avatar">
+                                        {{ feedback.name[0].upper() }}
+                                    </div>
+                                    <div class="user-details">
+                                        <div class="user-name">{{ feedback.name }}</div>
+                                    </div>
+                                </div>
+                            </td>
+                            <td class="email-cell">
+                                <a href="mailto:{{ feedback.email }}" class="email-link text-truncate d-inline-block" style="max-width: 100%">
+                                    {{ feedback.email }}
+                                </a>
+                            </td>
+                            <td class="subject-cell">
+                                <div class="subject-badge text-truncate" style="max-width: 100%">
+                                    {{ feedback.subject }}
+                                </div>
+                            </td>
+                            <td class="content-cell">
+                                <div class="content-preview text-truncate" style="max-width: 100%" title="{{ feedback.content }}">
+                                    {{ feedback.content }}
+                                </div>
+                                {% if feedback.content|length > 100 %}
+                                <button class="btn btn-sm btn-link p-0 expand-btn" onclick="toggleContent(this)">
+                                    <i class="fas fa-expand-alt me-1"></i>Show More
+                                </button>
+                                {% endif %}
+                            </td>
+                            <td class="date-cell">
+                                <div class="date-info">
+                                    <div class="date-primary">{{ feedback.created_at.strftime('%m/%d/%Y') }}</div>
+                                    <div class="date-secondary">{{ feedback.created_at.strftime('%H:%M') }}</div>
+                                </div>
+                            </td>
+                            <td class="actions-cell text-center">
+                                <form action="{{ url_for('user.delete_feedback', feedback_id=feedback.id) }}" method="POST" class="d-inline">
+                                    {# 🔒 ADD: CSRF Token - This was missing! #}
+                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                                    <button type="submit" class="btn btn-sm btn-outline-danger" title="Delete" onclick="return confirm('Are you sure you want to delete this feedback?')">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </form>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        {# Pagination Navigation #}
+        {% if feedback.pages > 1 %}
+        <nav aria-label="Feedback pagination" class="mt-4">
+            <div class="pagination-container">
+                <div class="pagination-info">
+                    <span class="text-muted">
+                        Showing {{ (feedback.page - 1) * feedback.per_page + 1 }} to 
+                        {{ feedback.page * feedback.per_page if feedback.page * feedback.per_page <= feedback.total else feedback.total }} 
+                        of {{ feedback.total }} results
+                    </span>
+                </div>
+                <ul class="pagination custom-pagination">
+                    {% if feedback.has_prev %}
+                    <li class="page-item">
+                        <a class="page-link" href="{{ url_for('user.feedback_display', page=feedback.prev_num) }}">
+                            <i class="fas fa-chevron-left"></i>
+                        </a>
+                    </li>
+                    {% endif %}
+                    
+                    {% for page_num in feedback.iter_pages() %}
+                        {% if page_num %}
+                            <li class="page-item {% if page_num == feedback.page %}active{% endif %}">
+                                <a class="page-link" href="{{ url_for('user.feedback_display', page=page_num) }}">{{ page_num }}</a>
+                            </li>
+                        {% else %}
+                            <li class="page-item disabled">
+                                <span class="page-link">...</span>
+                            </li>
+                        {% endif %}
+                    {% endfor %}
+                    
+                    {% if feedback.has_next %}
+                    <li class="page-item">
+                        <a class="page-link" href="{{ url_for('user.feedback_display', page=feedback.next_num) }}">
+                            <i class="fas fa-chevron-right"></i>
+                        </a>
+                    </li>
+                    {% endif %}
+                </ul>
+            </div>
+        </nav>
+        {% endif %}
+    {% endif %}
+</div>
+
+<!-- Feedback Detail Modal -->
+<div class="modal fade" id="feedbackModal" tabindex="-1" aria-labelledby="feedbackModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title text-primary" id="feedbackModalLabel">
+                    <i class="fas fa-comment-dots me-2"></i>Feedback Details
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body" id="feedbackModalBody">
+                <!-- Content will be loaded dynamically -->
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    /* Container and layout */
+    .container {
+        max-width: 1200px;
+    }
+    
+    /* Header styling */
+    .feedback-header {
+        background: linear-gradient(135deg, #f8fbff 0%, #e3f2fd 100%);
+        border-radius: 16px;
+        padding: 2rem;
+        border: 2px solid #bbdefb;
+        box-shadow: 0 4px 12px rgba(25, 118, 210, 0.1);
+    }
+    
+    .header-stats {
+        display: flex;
+        gap: 1rem;
+    }
+    
+    .stat-card {
+        background: linear-gradient(135deg, #1976d2 0%, #42a5f5 100%);
+        color: white;
+        padding: 1rem 1.5rem;
+        border-radius: 12px;
+        text-align: center;
+        box-shadow: 0 4px 12px rgba(25, 118, 210, 0.3);
+        min-width: 120px;
+    }
+    
+    .stat-number {
+        font-size: 1.5rem;
+        font-weight: bold;
+        line-height: 1;
+    }
+    
+    .stat-label {
+        font-size: 0.8rem;
+        opacity: 0.9;
+        margin-top: 0.25rem;
+    }
+    
+    /* Empty state */
+    .empty-state {
+        background: linear-gradient(135deg, #ffffff 0%, #f8fbff 100%);
+        border: 2px solid #e3f2fd;
+        border-radius: 16px;
+        padding: 4rem 2rem;
+        text-align: center;
+        box-shadow: 0 8px 25px rgba(25, 118, 210, 0.1);
+    }
+    
+    .empty-icon {
+        font-size: 4rem;
+        color: #90caf9;
+    }
+    
+    /* Table container */
+    .feedback-table-container {
+        background: linear-gradient(135deg, #ffffff 0%, #f8fbff 100%);
+        border: 2px solid #e3f2fd;
+        border-radius: 16px;
+        padding: 1.5rem;
+        box-shadow: 0 8px 25px rgba(25, 118, 210, 0.1);
+        overflow: hidden;
+    }
+    
+    .table-header {
+        padding-bottom: 1rem;
+        border-bottom: 2px solid #e3f2fd;
+    }
+    
+    /* Custom table styling */
+    .feedback-table {
+        margin-bottom: 0;
+        border-collapse: separate;
+        border-spacing: 0;
+        table-layout: fixed;
+        width: 100%;
+    }
+    
+    .feedback-table thead th {
+        background: linear-gradient(135deg, #1976d2 0%, #42a5f5 100%);
+        color: white;
+        border: none;
+        padding: 1rem 0.75rem;
+        font-weight: 600;
+        font-size: 0.9rem;
+        position: relative;
+    }
+    
+    .feedback-table thead th:first-child {
+        border-top-left-radius: 10px;
+    }
+    
+    .feedback-table thead th:last-child {
+        border-top-right-radius: 10px;
+    }
+    
+    .feedback-table tbody tr {
+        background-color: white;
+        border-bottom: 1px solid #e3f2fd;
+        transition: all 0.2s ease;
+    }
+    
+    .feedback-table tbody tr:hover {
+        background: linear-gradient(135deg, #f8fbff 0%, #e3f2fd 100%);
+        transform: scale(1.001);
+        box-shadow: 0 2px 8px rgba(25, 118, 210, 0.1);
+    }
+    
+    .feedback-table tbody td {
+        padding: 1rem 0.75rem;
+        vertical-align: middle;
+        border: none;
+        overflow: hidden;
+    }
+    
+    /* Cell-specific styling */
+    .name-cell {
+        min-width: 180px;
+    }
+    
+    .user-info {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+    }
+    
+    .user-avatar {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        background: linear-gradient(135deg, #42a5f5 0%, #1976d2 100%);
+        color: white;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: bold;
+        font-size: 0.9rem;
+    }
+    
+    .user-name {
+        font-weight: 600;
+        color: #1565c0;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        max-width: 100px;
+    }
+    
+    .email-cell {
+        min-width: 200px;
+    }
+    
+    .email-link {
+        color: #42a5f5;
+        text-decoration: none;
+        transition: all 0.2s ease;
+    }
+    
+    .email-link:hover {
+        color: #1976d2;
+        text-decoration: underline;
+    }
+    
+    .subject-cell {
+        min-width: 150px;
+    }
+    
+    .subject-badge {
+        background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%);
+        color: #1565c0;
+        padding: 0.4rem 0.8rem;
+        border-radius: 15px;
+        font-size: 0.85rem;
+        font-weight: 500;
+        border: 1px solid #90caf9;
+        display: inline-block;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+    
+    .content-cell {
+        max-width: 300px;
+        word-wrap: break-word;
+    }
+    
+    .content-preview {
+    font-size: 0.9rem;
+    color: #546e7a;
+    line-height: 1.4;
+    cursor: help;
+    display: block;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: normal;
+    max-height: 4.2em; /* Approximately 3 lines of text */
+    transition: max-height 0.3s ease;
+    }
+
+    .content-preview.expanded {
+    max-height: none;
+    white-space: normal;
+    }
+    
+    .expand-btn {
+        color: #42a5f5;
+        font-size: 0.8rem;
+        text-decoration: none;
+        margin-top: 0.25rem;
+    }
+    
+    .expand-btn:hover {
+        color: #1976d2;
+    }
+    
+    .date-cell {
+        min-width: 120px;
+    }
+    
+    .date-info {
+        text-align: center;
+    }
+    
+    .date-primary {
+        font-weight: 600;
+        color: #1565c0;
+        font-size: 0.9rem;
+    }
+    
+    .date-secondary {
+        font-size: 0.8rem;
+        color: #90a4ae;
+    }
+    
+    .actions-cell {
+        min-width: 100px;
+    }
+    
+    .btn-outline-danger {
+        border-radius: 6px;
+        transition: all 0.2s ease;
+    }
+    
+    .btn-outline-danger:hover {
+        transform: scale(1.1);
+    }
+    
+    /* Pagination */
+    .pagination-container {
+        display: flex;
+        justify-content: between;
+        align-items: center;
+        background: linear-gradient(135deg, #f8fbff 0%, #e3f2fd 100%);
+        padding: 1rem 1.5rem;
+        border-radius: 12px;
+        border: 2px solid #bbdefb;
+    }
+    
+    .pagination-info {
+        flex: 1;
+    }
+    
+    .custom-pagination {
+        margin: 0;
+    }
+    
+    .custom-pagination .page-link {
+        color: #42a5f5;
+        border: 2px solid #e3f2fd;
+        background-color: white;
+        border-radius: 8px;
+        margin: 0 2px;
+        padding: 0.5rem 0.75rem;
+        transition: all 0.2s ease;
+    }
+    
+    .custom-pagination .page-link:hover {
+        background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%);
+        border-color: #90caf9;
+        color: #1565c0;
+        transform: translateY(-1px);
+    }
+    
+    .custom-pagination .page-item.active .page-link {
+        background: linear-gradient(135deg, #1976d2 0%, #42a5f5 100%);
+        border-color: #1976d2;
+        color: white;
+        box-shadow: 0 2px 8px rgba(25, 118, 210, 0.3);
+    }
+    
+    .custom-pagination .page-item.disabled .page-link {
+        color: #b0bec5;
+        border-color: #e0e0e0;
+        background-color: #f5f5f5;
+    }
+    
+    /* Modal styling */
+    .modal-content {
+        border: 2px solid #e3f2fd;
+        border-radius: 16px;
+        box-shadow: 0 20px 60px rgba(25, 118, 210, 0.15);
+    }
+    
+    .modal-header {
+        background: linear-gradient(135deg, #f8fbff 0%, #e3f2fd 100%);
+        border-bottom: 2px solid #bbdefb;
+        border-radius: 14px 14px 0 0;
+    }
+    
+    /* Button styling */
+    .btn-rounded {
+        border-radius: 25px;
+        padding: 0.75rem 1.5rem;
+        font-weight: 600;
+    }
+    
+    /* Responsive design */
+    @media (max-width: 992px) {
+        .feedback-header {
+            flex-direction: column;
+            gap: 1rem;
+            text-align: center;
+        }
+        
+        .header-stats {
+            justify-content: center;
+        }
+        
+        .table-header .d-flex {
+            flex-direction: column;
+            gap: 1rem;
+        }
+        
+        .pagination-container {
+            flex-direction: column;
+            gap: 1rem;
+            text-align: center;
+        }
+    }
+    
+    @media (max-width: 768px) {
+        .container {
+            padding: 0 15px;
+        }
+        
+        .feedback-table-container {
+            padding: 1rem;
+        }
+        
+        .feedback-table {
+            font-size: 0.9rem;
+        }
+        
+        .feedback-table thead th,
+        .feedback-table tbody td {
+            padding: 0.75rem 0.5rem;
+        }
+        
+        .user-info {
+            flex-direction: column;
+            text-align: center;
+            gap: 0.5rem;
+        }
+    }
+    
+    /* Animation */
+    @keyframes fadeInUp {
+        from {
+            opacity: 0;
+            transform: translateY(20px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+    
+    .feedback-table-container,
+    .empty-state {
+        animation: fadeInUp 0.6s ease-out;
+    }
+</style>
+
+<!-- FontAwesome CDN for icons -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Initialize tooltips
+        var tooltipTriggerList = [].slice.call(document.querySelectorAll('[title]'));
+    });
+    
+    // Toggle content expansion
+    // Toggle content expansion
+function toggleContent(button) {
+    const contentDiv = button.previousElementSibling;
+    
+    if (contentDiv.classList.contains('expanded')) {
+        // Collapse content
+        contentDiv.classList.remove('expanded');
+        button.innerHTML = '<i class="fas fa-expand-alt me-1"></i>Show More';
+    } else {
+        // Expand content
+        contentDiv.classList.add('expanded');
+        button.innerHTML = '<i class="fas fa-compress-alt me-1"></i>Show Less';
+    }
+}
+</script>
+{% endblock %}

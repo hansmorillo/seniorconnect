@@ -1,4 +1,5 @@
-from flask import Flask, render_template
+from flask import Flask, render_template, request  
+from flask_login import current_user  
 from dotenv import load_dotenv
 from datetime import timedelta
 import os
@@ -16,11 +17,13 @@ from config import SQLALCHEMY_DATABASE_URI, SQLALCHEMY_TRACK_MODIFICATIONS
 # ---------- Load Environment Variables ----------
 load_dotenv()
 
-def create_app():
+def create_app(test_config=None):
     app = Flask(__name__)
+    
+    
     app.secret_key = os.getenv('SECRET_KEY', 'fallback_secret')
 
-    # ---------- Database Stuff ----------
+    # Database Setup
     app.config['SQLALCHEMY_DATABASE_URI'] = SQLALCHEMY_DATABASE_URI
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = SQLALCHEMY_TRACK_MODIFICATIONS
 
@@ -29,7 +32,8 @@ def create_app():
     bcrypt.init_app(app)
     login_manager.init_app(app)
     login_manager.login_view = 'auth.login'
-    # CSRF 
+
+    # CSRF
     csrf.init_app(app)  # Initialize CSRF protection with Flask-WTF
     app.config['WTF_CSRF_ENABLED'] = True  # Enable CSRF protection using Flask-WTF
     # Session & Cookie Configuration
@@ -43,15 +47,12 @@ def create_app():
     app.config['REMEMBER_COOKIE_SECURE'] = True
     app.config['REMEMBER_COOKIE_HTTPONLY'] = True
     app.config['REMEMBER_COOKIE_SAMESITE'] = 'Lax'
-
-
     # ---------- User Loader ----------
     @login_manager.user_loader
     def load_user(user_id: str):
         session = db.session
         return session.get(User, user_id)  # SQLAlchemy API get method
-
-    # ---------- Register Blueprints ----------
+    
     app.register_blueprint(auth)
     app.register_blueprint(event)
     app.register_blueprint(user)
@@ -59,14 +60,40 @@ def create_app():
     app.register_blueprint(chat)
     app.register_blueprint(group)
 
-    # ---------- Public Routes ----------
+    # ---------- Public Routes WITH Rate Limiting ----------
     @app.route('/')
+    @limiter.limit("100 per minute")
     def home():
         return render_template('index.html')
 
     @app.route('/about')
+    @limiter.limit("50 per minute")
     def about():
         return render_template('about.html')
+
+    # ---------- Health Check (No Rate Limiting) ----------
+    @app.route('/health')
+    def health_check():
+        return {'status': 'healthy', 'service': 'seniorconnect'}, 200
+
+    # ---------- Error Handlers ----------
+    @app.errorhandler(403)
+    def forbidden(error):
+        return render_template('errors/403.html'), 403
+    
+    @app.errorhandler(404)
+    def not_found(error):
+        return render_template('errors/404.html'), 404
+    
+    @app.errorhandler(400)
+    def csrf_error(reason):
+        return render_template('errors/csrf_error.html', reason=reason), 400
+    
+    # 🔒 Rate Limit Error Handler
+    @app.errorhandler(429)
+    def ratelimit_handler(e):
+        return render_template('errors/rate_limit_exceeded.html', 
+                             description=e.description), 429
 
     return app
 

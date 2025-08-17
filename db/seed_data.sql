@@ -2,9 +2,6 @@
 
 USE seniorconnect;
 
-INSERT INTO users (id, display_name, phone_number)
-VALUES ('uuid-user-1', 'Alice Tan', '+6591234567');
-
 INSERT INTO interest_groups (id, name, description, creator_id)
 VALUES ('uuid-group-1', 'Gardening Club', 'A group for plant lovers.', 'uuid-user-1');
 

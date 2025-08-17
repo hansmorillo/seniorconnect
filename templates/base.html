@@ -18,14 +18,16 @@
                         <li class="nav-item">
                             <a class="nav-link" href="{{ url_for('event.events') }}">Events</a>
                         </li>
-                        <li class="nav-item d-flex align-items-center">
-                            <form action="{{ url_for('auth.logout') }}" method="POST" class="m-0 p-0">
-                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                                <button type="submit" class="nav-link btn btn-link p-0 m-0" style="text-decoration: none;">
-                                    Logout
-                                </button>
-                            </form>
+                        <li class="nav-item">
+                            <a class="nav-link" href="{{ url_for('user.feedback') }}">Feedback</a>
                         </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="{{ url_for('user.notifications') }}">Notifications</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="{{ url_for('user.weather') }}">Weather</a>
+                        </li>
+                        <li class="nav-item"><a class="nav-link" href="/logout">Logout</a></li>
                     {% else %}
                         <li class="nav-item">
                             <a class="nav-link" href="{{ url_for('home') }}">About Us</a>
