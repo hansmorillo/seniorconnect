@@ -1,6 +1,7 @@
 # models/booking.py
 from extensions import db  # Import db from your extensions
 from datetime import datetime
+from sqlalchemy import UniqueConstraint, CheckConstraint
 import uuid
 
 class Booking(db.Model):
@@ -33,6 +34,11 @@ class Booking(db.Model):
     status = db.Column(db.String(50), default='confirmed')
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    __table_args__ = (
+        UniqueConstraint('location', 'booking_date', 'time_slot', 'status', name='uq_booking_slot_status'),
+        CheckConstraint('expected_attendees > 0 AND expected_attendees <= 1000', name='chk_expected_attendees_range'),
+    )
     
     def __repr__(self):
         return f'<Booking {self.reference_number}: {self.event_title}>'

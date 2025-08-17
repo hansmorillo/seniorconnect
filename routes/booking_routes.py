@@ -8,6 +8,127 @@ from extensions import db, limiter
 from models.booking import Booking
 from types import SimpleNamespace
 import uuid
+import logging, json
+
+ALLOWED_LOCATIONS = {"Indoor Sports Hall", "Function Room", "Multi-purpose Hall"}
+
+VALID_INTEREST_GROUPS = {"Yoga", "Chess", "Taichi", "Mahjong", "Gardening"}
+
+VALID_ACTIVITY_TYPES = {"Workshop", "Talk", "Performance", "Hands-on Session", "Meeting", "Event", "Others"}
+
+ENFORCE_DROPDOWN_WHITELIST = False
+
+# Mirror your actual labels; server must be source of truth
+TIME_SLOTS_BY_LOCATION = {
+    "Indoor Sports Hall": [
+        {"label": "8:00 AM – 10:00 AM"},
+        {"label": "10:30 AM – 12:30 PM"},
+        {"label": "1:00 PM – 3:00 PM"},
+        {"label": "3:30 PM – 5:30 PM"},
+        {"label": "6:00 PM – 8:00 PM"},
+        {"label": "8:30 PM – 10:30 PM"},
+    ],
+    "Function Room": [
+        {"label": "8:00 AM – 9:00 AM"},
+        {"label": "9:30 AM – 10:30 AM"},
+        {"label": "11:00 AM – 12:00 PM"},
+        {"label": "12:30 PM – 1:30 PM"},
+        {"label": "2:00 PM – 3:00 PM"},
+        {"label": "3:30 PM – 4:30 PM"},
+        {"label": "5:00 PM – 6:00 PM"},
+        {"label": "6:30 PM – 7:30 PM"},
+        {"label": "8:00 PM – 9:00 PM"},
+    ],
+    "Multi-purpose Hall": [
+        {"label": "8:00 AM – 9:30 AM"},
+        {"label": "9:45 AM – 11:15 AM"},
+        {"label": "11:30 AM – 1:00 PM"},
+        {"label": "1:15 PM – 2:45 PM"},
+        {"label": "3:00 PM – 4:30 PM"},
+        {"label": "4:45 PM – 6:15 PM"},
+        {"label": "6:30 PM – 8:00 PM"},
+        {"label": "8:15 PM – 9:45 PM"},
+    ],
+}
+
+def validate_input_sizes(form_data):
+    limits = {
+        'eventTitle': 100,
+        'description': 1000,
+        'equipment': 500,
+        'organiserName': 100,
+        'organiserEmail': 100,
+        'organiserPhone': 20,
+        'attendees': 10,  # length of string
+    }
+    for field, max_len in limits.items():
+        val = form_data.get(field, '') or ''
+        if len(str(val)) > max_len:
+            return False, f"{field} exceeds maximum length of {max_len} characters"
+    # numeric sanity for attendees
+    try:
+        att = int(form_data.get('attendees', '0'))
+    except ValueError:
+        return False, "Invalid attendees number"
+    if not (1 <= att <= 1000):
+        return False, "Maximum 1000 attendees allowed"
+    return True, None
+
+def _normalize_slot(label: str) -> str:
+    """Normalise a slot label by unifying dash type and whitespace around it."""
+    if not label:
+        return ""
+    # unify to en-dash
+    norm = label.replace("—", "–").replace("-", "–")
+    # ensure single spaces around dash
+    parts = [p.strip() for p in norm.split("–")]
+    return " – ".join(parts) if len(parts) == 2 else norm.strip()
+
+def validate_booking_rules(location, date_str, time_slot):
+    if location not in ALLOWED_LOCATIONS:
+        return False, "Invalid location"
+    try:
+        booking_date = datetime.strptime(date_str, "%Y-%m-%d").date()
+    except ValueError:
+        return False, "Invalid date format"
+    if booking_date < date.today():
+        return False, "Cannot book past dates"
+    
+    # extra guard: if booking is today, disallow slots that have already started
+    if booking_date == date.today():
+        start_t = _parse_start_time_from_label(time_slot)
+        if start_t and datetime.combine(booking_date, start_t) <= datetime.now():
+            return False, "Cannot book a timeslot that has already started"
+
+
+    valid_slots = TIME_SLOTS_BY_LOCATION.get(location, [])
+    norm_time = _normalize_slot(time_slot)
+    valid_norm = {_normalize_slot(s['label']) for s in valid_slots}
+    if norm_time not in valid_norm:
+        return False, "Invalid timeslot for this location"
+    return True, None
+
+# simple audit logger
+audit_logger = logging.getLogger("audit")
+if not audit_logger.handlers:
+    import os
+    os.makedirs("logs", exist_ok=True)
+    handler = logging.FileHandler("logs/audit.log")
+    handler.setFormatter(logging.Formatter('%(asctime)s - %(message)s'))
+    audit_logger.addHandler(handler)
+    audit_logger.setLevel(logging.INFO)
+
+def log_booking_action(action, booking_id, user_id, details=None):
+    entry = {
+        "timestamp": datetime.utcnow().isoformat(),
+        "action": action,  # CREATE / UPDATE / CANCEL / VIEW
+        "booking_id": booking_id,
+        "user_id": user_id,
+        "ip_address": request.remote_addr,
+        "user_agent": request.headers.get("User-Agent", ""),
+        "details": details or {},
+    }
+    audit_logger.info(json.dumps(entry))
 
 booking = Blueprint('booking', __name__, url_prefix='/booking')
 
@@ -17,17 +138,51 @@ def generate_booking_reference():
     unique_id = str(uuid.uuid4())[:8].upper()
     return f"SC-{timestamp}-{unique_id}"
 
+def parse_booking_end_datetime(booking_date, time_slot):
+    """
+    Parse booking date and time slot to get the end datetime.
+    Handles en-dash (–), em-dash (—), or hyphen (-).
+    """
+    try:
+        sep = "–"
+        if "—" in time_slot:
+            sep = "—"
+        elif "-" in time_slot:
+            sep = "-"
+        start_end = [p.strip() for p in time_slot.split(sep)]
+        if len(start_end) != 2:
+            # try fallback normalisation
+            start_end = [p.strip() for p in _normalize_slot(time_slot).split(" – ")]
+            if len(start_end) != 2:
+                return None
+        end_time = datetime.strptime(start_end[1], "%I:%M %p").time()
+        return datetime.combine(booking_date, end_time)
+    except (ValueError, IndexError, AttributeError):
+        return None
+
 def _parse_start_time_from_label(label: str):
-    """Extract a time() object from a slot label like '8:00 AM – 10:00 AM' or '8:00 AM - 10:00 AM'."""
+    """Extract start time from 'H:MM AM – H:MM AM' (accepts –, —, or -)."""
     if not label:
         return None
-    # handle en dash or hyphen
-    sep = '–' if '–' in label else '-'
+    if "–" in label:
+        sep = "–"
+    elif "—" in label:
+        sep = "—"
+    elif "-" in label:
+        sep = "-"
+    else:
+        return None
     start_str = label.split(sep)[0].strip()
     try:
         return datetime.strptime(start_str, "%I:%M %p").time()
     except ValueError:
-        return None
+        try:
+            # last-ditch: normalise then parse
+            start_norm = _normalize_slot(label).split(" – ")[0].strip()
+            return datetime.strptime(start_norm, "%I:%M %p").time()
+        except Exception:
+            return None
+
 
 def _is_within_24h(booking_obj):
     """Return True if the booking starts within the next 24 hours (and is in the future)."""
@@ -64,6 +219,11 @@ def check_availability():
         # Parse the date
         try:
             booking_date = datetime.strptime(date_str, "%Y-%m-%d").date()
+            # basic input guardrails
+            if location not in ALLOWED_LOCATIONS:
+                return jsonify({'success': False, 'error': 'Invalid location'}), 400
+            if booking_date < date.today():
+                return jsonify({'success': False, 'error': 'Past date'}), 400
         except ValueError:
             return jsonify({'success': False, 'error': 'Invalid date format'}), 400
         
@@ -138,12 +298,53 @@ def booking_success():
         location = request.form.get('location')
         date_str = request.form.get('date')
         time_label = request.form.get('time')
+
+        # size limits (maps to PDF)
+        ok, err = validate_input_sizes(request.form)
+        if not ok:
+            flash(err, 'error')
+            return redirect(url_for('booking.booking_main'))
+
+        # NEW: booking rules (valid location/date/slot)
+        ok, err = validate_booking_rules(location, date_str, time_label)
+        if not ok:
+            flash(err, 'error')
+            return redirect(url_for('booking.booking_main'))
+        
+        interest_group = request.form.get('interestGroup')
+        activity_type = request.form.get('activityType')
+        accessibility_help = request.form.get('accessibilityHelp')
+
+        # Required fields (catch missing values clearly)
+        if not all([
+            location, date_str, time_label,
+            event_title := request.form.get('eventTitle'),
+            interest_group, activity_type,
+            attendees := request.form.get('attendees'),
+            organiser_name := request.form.get('organiserName'),
+            organiser_email := request.form.get('organiserEmail'),
+            organiser_phone := request.form.get('organiserPhone'),
+            accessibility_help
+        ]):
+            flash('All required fields must be filled out.', 'error')
+            return redirect(url_for('booking.booking_main'))
+
+        # Optional: enforce strict dropdown/radio whitelists
+        if ENFORCE_DROPDOWN_WHITELIST:
+            if interest_group not in VALID_INTEREST_GROUPS:
+                flash('Invalid interest group', 'error')
+                return redirect(url_for('booking.booking_main'))
+            if activity_type not in VALID_ACTIVITY_TYPES:
+                flash('Invalid activity type', 'error')
+                return redirect(url_for('booking.booking_main'))
+            if accessibility_help not in {'Yes', 'No'}:
+                flash('Invalid accessibility selection', 'error')
+                return redirect(url_for('booking.booking_main'))
+
         
         # Event Details
         event_title = request.form.get('eventTitle')
-        interest_group = request.form.get('interestGroup')
         attendees = request.form.get('attendees')
-        activity_type = request.form.get('activityType')
         equipment = request.form.get('equipment', '').strip()
         description = request.form.get('description', '').strip()
         
@@ -151,7 +352,6 @@ def booking_success():
         organiser_name = request.form.get('organiserName')
         organiser_email = request.form.get('organiserEmail')
         organiser_phone = request.form.get('organiserPhone')
-        accessibility_help = request.form.get('accessibilityHelp')
         
         # Validate required fields
         if not all([location, date_str, time_label, event_title, interest_group, 
@@ -181,7 +381,6 @@ def booking_success():
             location=location,
             booking_date=booking_date,
             time_slot=time_label,
-            organiser_email=organiser_email,
             status='confirmed'
         ).first()
         
@@ -235,6 +434,11 @@ def booking_success():
         # Save to database
         db.session.add(new_booking)
         db.session.commit()
+        log_booking_action('CREATE', new_booking.id, current_user.id, {
+            "location": location,
+            "date": date_str,
+            "reference": reference_number
+        })
         
         print(f"Booking saved successfully with reference: {reference_number}")  # Debug log
         
@@ -298,32 +502,45 @@ def booking_success():
 def booking_manage():
     """Display user's bookings - both upcoming and past"""
     try:
+        # CLEANUP: Update past bookings status first
+        cleanup_past_bookings()
+        
+        now = datetime.now()
         today = date.today()
         
-        # Get upcoming bookings (only confirmed bookings with future dates)
-        upcoming_bookings = Booking.query.filter(
-            Booking.booked_by_user_id == current_user.id,
-            Booking.booking_date >= today,
-            Booking.status == 'confirmed'
-        ).order_by(Booking.booking_date.asc(), Booking.time_slot.asc()).all()
-        
-        for b in upcoming_bookings:
-            # attach a transient attribute used by the template
-            b.is_edit_locked = _is_within_24h(b)
-
-        # Get past bookings - includes:
-        # 1. All bookings with past dates (regardless of status)
-        # 2. All cancelled bookings (regardless of date)
-        from sqlalchemy import or_
-        
-        past_bookings = Booking.query.filter(
+        # Get all user's bookings
+        all_bookings = Booking.query.filter(
             Booking.booked_by_user_id == current_user.id
-        ).filter(
-            or_(
-                Booking.booking_date < today,  # Past date bookings
-                Booking.status == 'cancelled'  # OR cancelled bookings
-            )
-        ).order_by(Booking.booking_date.desc()).all()
+        ).all()
+        
+        upcoming_bookings = []
+        past_bookings = []
+        
+        for booking_obj in all_bookings:
+            # Parse the booking's end time to determine if it's truly past
+            booking_end_datetime = parse_booking_end_datetime(booking_obj.booking_date, booking_obj.time_slot)
+            
+            if booking_obj.status == 'cancelled':
+                # All cancelled bookings go to past regardless of date
+                past_bookings.append(booking_obj)
+            elif booking_end_datetime and booking_end_datetime < now:
+                # Booking has ended - should already be marked as completed by cleanup
+                past_bookings.append(booking_obj)
+            elif booking_obj.booking_date >= today and booking_obj.status == 'confirmed':
+                # Future booking that hasn't ended yet
+                booking_obj.is_edit_locked = _is_within_24h(booking_obj)
+                upcoming_bookings.append(booking_obj)
+            else:
+                # Fallback: if we can't parse the time, use date only
+                if booking_obj.booking_date < today:
+                    past_bookings.append(booking_obj)
+                else:
+                    booking_obj.is_edit_locked = _is_within_24h(booking_obj)
+                    upcoming_bookings.append(booking_obj)
+        
+        # Sort bookings
+        upcoming_bookings.sort(key=lambda b: (b.booking_date, b.time_slot))
+        past_bookings.sort(key=lambda b: b.booking_date, reverse=True)
         
         # Generate CSRF token for the forms
         csrf_token = generate_csrf()
@@ -339,7 +556,41 @@ def booking_manage():
         print(f"Error loading bookings: {str(e)}")
         flash('Error loading your bookings. Please try again.', 'error')
         return redirect(url_for('booking.booking_main'))
-    
+
+def cleanup_past_bookings():
+    """Update status of bookings that have already ended"""
+    try:
+        now = datetime.now()
+        
+        # Get all confirmed bookings
+        confirmed_bookings = Booking.query.filter_by(status='confirmed').all()
+        
+        updated_count = 0
+        for booking in confirmed_bookings:
+            booking_end_datetime = parse_booking_end_datetime(booking.booking_date, booking.time_slot)
+            
+            # If we can parse the datetime and it's in the past, mark as completed
+            if booking_end_datetime and booking_end_datetime < now:
+                booking.status = 'completed'
+                updated_count += 1
+                print(f"Updated booking {booking.reference_number} to completed")
+            # Fallback: if we can't parse time, use date only
+            elif not booking_end_datetime and booking.booking_date < now.date():
+                booking.status = 'completed'
+                updated_count += 1
+                print(f"Updated booking {booking.reference_number} to completed (date only)")
+        
+        # Commit the changes
+        if updated_count > 0:
+            db.session.commit()
+            print(f"Cleanup completed: {updated_count} bookings updated to completed status")
+        
+    except Exception as e:
+        print(f"Error in cleanup_past_bookings: {str(e)}")
+        db.session.rollback()
+        # Don't raise the error - just log it so the main function continues
+        pass
+
 @booking.route('/get-booking/<booking_id>')
 @login_required
 def get_booking(booking_id):
@@ -390,15 +641,20 @@ def update_booking(booking_id):
             status='confirmed'
         ).first()
         
+        if not booking_obj:
+            return jsonify({'success': False, 'error': 'Booking not found or cannot be edited'}), 404
+        
+        # Check if booking has already ended
+        booking_end_datetime = parse_booking_end_datetime(booking_obj.booking_date, booking_obj.time_slot)
+        if booking_end_datetime and booking_end_datetime < datetime.now():
+            return jsonify({'success': False, 'error': 'Cannot edit a booking that has already ended'}), 400
+        
         # Disallow edits for bookings starting within 24 hours
         if _is_within_24h(booking_obj):
             return jsonify({
                 'success': False,
                 'error': 'Bookings starting within the next 24 hours cannot be edited. You can only cancel.'
             }), 400
-
-        if not booking_obj:
-            return jsonify({'success': False, 'error': 'Booking not found or cannot be edited'}), 404
         
         data = request.get_json()
         
@@ -410,6 +666,33 @@ def update_booking(booking_id):
         for field in required_fields:
             if not data.get(field):
                 return jsonify({'success': False, 'error': f'{field} is required'}), 400
+            
+        # NEW: size limits (reusing names from create by adapting keys)
+        fake_form = {
+            'eventTitle': data.get('event_title',''),
+            'description': data.get('event_description',''),
+            'equipment': data.get('equipment_required',''),
+            'organiserName': data.get('organiser_name',''),
+            'organiserEmail': data.get('organiser_email',''),
+            'organiserPhone': data.get('organiser_phone',''),
+            'attendees': str(data.get('expected_attendees','')),
+        }
+        ok, err = validate_input_sizes(fake_form)
+        if not ok:
+            return jsonify({'success': False, 'error': err}), 400
+
+        # Still require values:
+        if not all([data.get('interest_group'), data.get('activity_type'), data.get('accessibility_help')]):
+            return jsonify({'success': False, 'error': 'interest_group, activity_type, and accessibility_help are required'}), 400
+
+        # Optional strict enforcement
+        if ENFORCE_DROPDOWN_WHITELIST:
+            if data.get('interest_group') not in VALID_INTEREST_GROUPS:
+                return jsonify({'success': False, 'error': 'Invalid interest group'}), 400
+            if data.get('activity_type') not in VALID_ACTIVITY_TYPES:
+                return jsonify({'success': False, 'error': 'Invalid activity type'}), 400
+            if data.get('accessibility_help') not in {'Yes','No'}:
+                return jsonify({'success': False, 'error': 'Invalid accessibility selection'}), 400
         
         # Parse and validate date if provided
         if data.get('booking_date'):
@@ -424,6 +707,11 @@ def update_booking(booking_id):
         
         # If date or time slot changed, check availability
         new_time_slot = data.get('time_slot', booking_obj.time_slot)
+
+        valid_slots = TIME_SLOTS_BY_LOCATION.get(booking_obj.location, [])
+        if not any(s['label'] == new_time_slot for s in valid_slots):
+            return jsonify({'success': False, 'error': 'Invalid timeslot for this location'}), 400
+
         if new_date != booking_obj.booking_date or new_time_slot != booking_obj.time_slot:
             existing_booking = Booking.query.filter_by(
                 location=booking_obj.location,
@@ -451,7 +739,8 @@ def update_booking(booking_id):
         booking_obj.updated_at = datetime.utcnow()
         
         db.session.commit()
-        
+        log_booking_action('UPDATE', booking_obj.id, current_user.id, {"changes": data})
+
         return jsonify({'success': True, 'message': 'Booking updated successfully'})
         
     except Exception as e:
@@ -474,7 +763,12 @@ def cancel_booking(booking_id):
         if not booking_obj:
             return jsonify({'success': False, 'error': 'Booking not found or already cancelled'}), 404
         
-        # Check if booking is in the future
+        # Check if booking has already ended
+        booking_end_datetime = parse_booking_end_datetime(booking_obj.booking_date, booking_obj.time_slot)
+        if booking_end_datetime and booking_end_datetime < datetime.now():
+            return jsonify({'success': False, 'error': 'Cannot cancel a booking that has already ended'}), 400
+        
+        # Check if booking is in the future (fallback check using date only)
         if booking_obj.booking_date < date.today():
             return jsonify({'success': False, 'error': 'Cannot cancel past bookings'}), 400
         
@@ -482,6 +776,7 @@ def cancel_booking(booking_id):
         booking_obj.updated_at = datetime.utcnow()
         
         db.session.commit()
+        log_booking_action('CANCEL', booking_obj.id, current_user.id)
         
         return jsonify({'success': True, 'message': 'Booking cancelled successfully'})
         

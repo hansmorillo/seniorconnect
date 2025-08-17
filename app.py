@@ -23,6 +23,7 @@ load_dotenv()
 def create_app():
     app = Flask(__name__)
     app.secret_key = os.getenv('SECRET_KEY', 'fallback_secret')
+    app.config['MAX_CONTENT_LENGTH'] = 1 * 1024 * 1024  # 1 MB
 
     # ---------- Database Stuff ----------
     app.config['SQLALCHEMY_DATABASE_URI'] = SQLALCHEMY_DATABASE_URI

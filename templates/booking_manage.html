@@ -53,6 +53,16 @@
                 {{ 'Edit (Locked)' if booking.is_edit_locked else 'Edit' }}
               </button>
 
+              {% if booking.is_edit_locked %}
+                <button
+                  class="btn btn-outline-dark rounded-pill px-3 py-1 view-booking-btn"
+                  data-booking-id="{{ booking.id }}"
+                  title="View details"
+                >
+                  View
+                </button>
+              {% endif %}
+
               <button class="btn btn-outline-danger rounded-pill px-3 py-1 cancel-booking-btn"
                       data-booking-id="{{ booking.id }}"
                       data-booking-ref="{{ booking.reference_number }}">
