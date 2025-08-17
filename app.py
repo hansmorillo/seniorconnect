@@ -57,8 +57,6 @@ def create_app(test_config=None):
     app.register_blueprint(event)
     app.register_blueprint(user)
     app.register_blueprint(booking)
-    app.register_blueprint(chat)
-    app.register_blueprint(group)
 
     # ---------- Public Routes WITH Rate Limiting ----------
     @app.route('/')
