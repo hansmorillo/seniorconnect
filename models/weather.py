@@ -1,104 +1,154 @@
+# weather.py - SECURE VERSION
 import requests
+import os
 from datetime import datetime
 from flask import Blueprint, render_template, request, jsonify, flash, redirect, url_for
 from flask_login import login_required, current_user
 
 
-def get_weather_data(city="Singapore", api_key="42ba2a40d942a74fc7ad6b9bf7fc8c3f"):
-    """Fetch weather data from OpenWeatherMap API"""
+def get_weather_data(city="Singapore"):
+    """Fetch weather data from OpenWeatherMap API - SECURE VERSION"""
+    
+    # 🔒 SECURITY FIX 1: Get API key from environment
+    api_key = os.getenv('OPENWEATHER_KEY')
+    
+    # 🔒 SECURITY FIX 2: Validate API key exists
+    if not api_key:
+        return {'error': 'Weather service configuration error'}
+    
+    # 🔒 SECURITY FIX 3: Input validation for city name
+    if not city or not isinstance(city, str):
+        city = "Singapore"
+    
+    # Clean city name to prevent injection
+    city = city.strip()[:50]  # Limit length
+    if not city.replace(' ', '').replace('-', '').isalpha():
+        city = "Singapore"  # Fallback for invalid characters
+    
     try:
-        # Current weather endpoint
-        current_url = f"http://api.openweathermap.org/data/2.5/weather?q={city}&appid={api_key}&units=metric"
+        # 🔒 SECURITY FIX 4: Use HTTPS (your URLs already do this)
+        current_url = f"https://api.openweathermap.org/data/2.5/weather?q={city}&appid={api_key}&units=metric"
+        forecast_url = f"https://api.openweathermap.org/data/2.5/forecast?q={city}&appid={api_key}&units=metric"
         
-        # 5-day forecast endpoint
-        forecast_url = f"http://api.openweathermap.org/data/2.5/forecast?q={city}&appid={api_key}&units=metric"
+        # 🔒 SECURITY FIX 5: Add timeout to prevent hanging requests
+        current_response = requests.get(current_url, timeout=10)
+        forecast_response = requests.get(forecast_url, timeout=10)
         
-        # Fetch current weather
-        current_response = requests.get(current_url)
-        current_data = current_response.json()
-        
-        # Fetch forecast
-        forecast_response = requests.get(forecast_url)
-        forecast_data = forecast_response.json()
-        
+        # 🔒 SECURITY FIX 6: Validate response before processing
         if current_response.status_code == 200 and forecast_response.status_code == 200:
-            # Process current weather (unchanged)
+            current_data = current_response.json()
+            forecast_data = forecast_response.json()
+            
+            # 🔒 SECURITY FIX 7: Validate data structure exists
+            if not current_data.get('main') or not forecast_data.get('list'):
+                return {'error': 'Invalid weather data received'}
+            
+            # Process current weather (your existing logic with validation)
             weather_info = {
-                'city': current_data['name'],
-                'country': current_data['sys']['country'],
-                'temperature': round(current_data['main']['temp']),
-                'feels_like': round(current_data['main']['feels_like']),
-                'humidity': current_data['main']['humidity'],
-                'pressure': current_data['main']['pressure'],
-                'description': current_data['weather'][0]['description'].title(),
-                'icon': current_data['weather'][0]['icon'],
-                'wind_speed': round(current_data['wind']['speed'] * 3.6, 1),
-                'visibility': current_data.get('visibility', 0) / 1000,
-                'sunrise': datetime.fromtimestamp(current_data['sys']['sunrise']).strftime('%I:%M %p'),
-                'sunset': datetime.fromtimestamp(current_data['sys']['sunset']).strftime('%I:%M %p'),
+                'city': str(current_data.get('name', 'Unknown'))[:50],
+                'country': str(current_data.get('sys', {}).get('country', 'Unknown'))[:10],
+                'temperature': round(float(current_data['main'].get('temp', 0))),
+                'feels_like': round(float(current_data['main'].get('feels_like', 0))),
+                'humidity': int(current_data['main'].get('humidity', 0)),
+                'pressure': int(current_data['main'].get('pressure', 0)),
+                'description': str(current_data.get('weather', [{}])[0].get('description', 'Unknown')).title()[:100],
+                'icon': str(current_data.get('weather', [{}])[0].get('icon', '01d'))[:10],
+                'wind_speed': round(float(current_data.get('wind', {}).get('speed', 0)) * 3.6, 1),
+                'visibility': float(current_data.get('visibility', 0)) / 1000,
+                'sunrise': datetime.fromtimestamp(int(current_data.get('sys', {}).get('sunrise', 0))).strftime('%I:%M %p'),
+                'sunset': datetime.fromtimestamp(int(current_data.get('sys', {}).get('sunset', 0))).strftime('%I:%M %p'),
                 'current_time': datetime.now().strftime('%A, %B %d, %Y at %I:%M %p'),
-                'uv_index': get_uv_advice(current_data['main']['temp']),
-                'health_advice': get_health_advice(current_data['main']['temp'], current_data['main']['humidity'])
+                'uv_index': get_uv_advice(current_data['main'].get('temp', 0)),
+                'health_advice': get_health_advice(current_data['main'].get('temp', 0), current_data['main'].get('humidity', 0))
             }
             
-            # Process 5-day forecast - NEW IMPROVED VERSION
+            # Process 5-day forecast with validation
             daily_forecasts = []
             forecasts_by_date = {}
 
-            # Group all forecasts by date
-            for item in forecast_data['list']:
-                forecast_date = datetime.fromtimestamp(item['dt']).strftime('%Y-%m-%d')
+            # Group all forecasts by date with validation
+            for item in forecast_data.get('list', []):
+                if not item.get('dt') or not item.get('main'):
+                    continue  # Skip invalid entries
+                    
+                forecast_date = datetime.fromtimestamp(int(item['dt'])).strftime('%Y-%m-%d')
                 if forecast_date not in forecasts_by_date:
                     forecasts_by_date[forecast_date] = []
                 forecasts_by_date[forecast_date].append(item)
 
-            # Get the next 5 days (including today)
+            # Get the next 5 days
             next_5_days = sorted(forecasts_by_date.keys())[:5]
 
             for date in next_5_days:
                 day_forecasts = forecasts_by_date[date]
                 
-                # Get ALL temperature values for the day
-                all_temps = [f['main']['temp'] for f in day_forecasts]
+                # Validate and process temperatures
+                all_temps = []
+                for f in day_forecasts:
+                    if f.get('main', {}).get('temp') is not None:
+                        all_temps.append(float(f['main']['temp']))
+                
+                if not all_temps:
+                    continue  # Skip if no valid temperatures
+                
                 temp_min = round(min(all_temps))
                 temp_max = round(max(all_temps))
                 
-                # Get a representative forecast for midday (12pm) if available
+                # Get representative forecast
                 representative_forecast = None
                 for f in day_forecasts:
-                    forecast_hour = datetime.fromtimestamp(f['dt']).hour
-                    if forecast_hour == 12:  # Prefer noon forecast
+                    forecast_hour = datetime.fromtimestamp(int(f.get('dt', 0))).hour
+                    if forecast_hour == 12:
                         representative_forecast = f
                         break
                 
-                # Fallback to first forecast if no midday forecast found
                 if not representative_forecast:
-                    representative_forecast = day_forecasts[len(day_forecasts)//2]  # middle forecast
+                    representative_forecast = day_forecasts[len(day_forecasts)//2]
                 
-                # Format the date nicely (e.g., "Thursday, Aug 06")
-                formatted_date = datetime.fromtimestamp(representative_forecast['dt']).strftime('%A, %b %d')
+                # Validate representative forecast
+                if not representative_forecast.get('dt') or not representative_forecast.get('weather'):
+                    continue
+                
+                formatted_date = datetime.fromtimestamp(int(representative_forecast['dt'])).strftime('%A, %b %d')
                 
                 daily_forecasts.append({
-                    'date': formatted_date,
+                    'date': str(formatted_date)[:50],
                     'temp_max': temp_max,
                     'temp_min': temp_min,
-                    'description': representative_forecast['weather'][0]['description'].title(),
-                    'icon': representative_forecast['weather'][0]['icon'],
-                    'humidity': representative_forecast['main']['humidity']
+                    'description': str(representative_forecast.get('weather', [{}])[0].get('description', 'Unknown')).title()[:100],
+                    'icon': str(representative_forecast.get('weather', [{}])[0].get('icon', '01d'))[:10],
+                    'humidity': int(representative_forecast.get('main', {}).get('humidity', 0))
                 })
 
             weather_info['forecast'] = daily_forecasts
             return weather_info
             
         else:
+            # 🔒 SECURITY FIX 8: Don't expose detailed API errors to users
             return {'error': 'Unable to fetch weather data'}
             
+    except requests.exceptions.Timeout:
+        return {'error': 'Weather service timeout - please try again'}
+    except requests.exceptions.ConnectionError:
+        return {'error': 'Weather service unavailable - please check your connection'}
+    except ValueError as e:
+        # JSON decode errors
+        return {'error': 'Invalid weather data format received'}
     except Exception as e:
-        return {'error': f'Weather service unavailable: {str(e)}'}
+        # 🔒 SECURITY FIX 9: Log error details server-side, show generic message to user
+        print(f"Weather API Error: {str(e)}")  # Log for debugging
+        return {'error': 'Weather service temporarily unavailable'}
 
 def get_health_advice(temp, humidity):
     """Provide health advice based on weather conditions for seniors"""
     advice = []
+    
+    # 🔒 SECURITY FIX 10: Validate numeric inputs
+    try:
+        temp = float(temp) if temp is not None else 25
+        humidity = float(humidity) if humidity is not None else 50
+    except (ValueError, TypeError):
+        temp, humidity = 25, 50  # Safe defaults
     
     if temp > 30:
         advice.append("🌡️ Very warm day - Stay hydrated and avoid prolonged sun exposure")
@@ -121,6 +171,11 @@ def get_health_advice(temp, humidity):
 
 def get_uv_advice(temp):
     """Simple UV advice based on temperature"""
+    try:
+        temp = float(temp) if temp is not None else 25
+    except (ValueError, TypeError):
+        temp = 25
+        
     if temp > 28:
         return "High UV expected - Use SPF 30+ sunscreen"
     elif temp > 22:
@@ -128,21 +183,52 @@ def get_uv_advice(temp):
     else:
         return "Low UV conditions"
 
+# 🔒 SECURITY FIX 11: Rate limiting helper (optional)
+from functools import wraps
+from time import time
+from collections import defaultdict
+
+# Simple in-memory rate limiter (use Redis in production)
+api_calls = defaultdict(list)
+
+def rate_limit(max_calls=10, window=60):
+    """Rate limiting decorator for API calls"""
+    def decorator(func):
+        @wraps(func)
+        def wrapper(*args, **kwargs):
+            user_id = getattr(current_user, 'id', 'anonymous') if current_user.is_authenticated else 'anonymous'
+            now = time()
+            
+            # Clean old entries
+            api_calls[user_id] = [call_time for call_time in api_calls[user_id] if now - call_time < window]
+            
+            # Check rate limit
+            if len(api_calls[user_id]) >= max_calls:
+                return {'error': 'Too many weather requests. Please wait a moment.'}
+            
+            # Record this call
+            api_calls[user_id].append(now)
+            
+            return func(*args, **kwargs)
+        return wrapper
+    return decorator
+
 # Weather functions for SeniorConnect
+@rate_limit(max_calls=5, window=60)  # 5 calls per minute
 def weather_page():
     """Weather page route - integrates with existing Flask app"""
-    city = request.args.get('city', 'Singapore')  # Default to Singapore
-    weather_data = get_weather_data(city)
+    # Singapore only - no user input for city
+    weather_data = get_weather_data("Singapore")
     
     if 'error' in weather_data:
         flash(f'Weather Error: {weather_data["error"]}', 'danger')
-        return render_template('weather.html', error=weather_data['error'], city=city)
+        return render_template('weather.html', error=weather_data['error'])
     
-    return render_template('weather.html', weather=weather_data, city=city)
+    return render_template('weather.html', weather=weather_data)
 
 # API endpoint for AJAX updates
+@rate_limit(max_calls=10, window=60)  # 10 calls per minute for AJAX
 def weather_api():
     """API endpoint for getting weather data as JSON"""
-    city = request.args.get('city', 'Singapore')
-    weather_data = get_weather_data(city)
+    weather_data = get_weather_data("Singapore")
     return jsonify(weather_data)
