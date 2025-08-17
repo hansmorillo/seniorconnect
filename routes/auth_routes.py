@@ -1,15 +1,23 @@
 from flask import Blueprint, render_template, request, redirect, flash, url_for
-from flask_login import login_user, logout_user, login_required
+from flask_login import login_user, logout_user, login_required, current_user
 from models.user import User
 from extensions import db, bcrypt, limiter  # using shared instances from extensions.py
 import uuid
 from forms.auth_forms import LoginForm, RegisterForm
+from datetime import timedelta
 
 auth = Blueprint('auth', __name__)
 
 @auth.route('/register', methods=['GET', 'POST'])
 def register():
     form = RegisterForm()
+
+    # Optional: log to see what's failing
+
+    if request.method == 'POST' and not form.validate():
+        # Stay on the same page; do NOT redirect
+        flash('Please fix the errors below.', 'danger')
+        return render_template('register.html', form=form)
 
     if form.validate_on_submit():
         display_name = form.display_name.data
@@ -47,25 +55,35 @@ def register():
 @auth.route('/login', methods=['GET', 'POST'])
 @limiter.limit("5 per minute")  # Rate limit login attempts
 def login():
+    if current_user.is_authenticated:
+        return redirect(url_for("home"))
+
     form = LoginForm()
 
     if form.validate_on_submit():
-        email = form.email.data
+        email = (form.email.data or "").lower()
         password = form.password.data
-        remember = form.remember.data
+        remember = bool(getattr(form, "remember", None) and form.remember.data)
 
-        # Fetch user from DB
-        user = User.query.filter_by(email=email).first()
+        user = User.query.filter_by(email=form.email.data).first()
 
-        # Verify credentials
-        if user and bcrypt.check_password_hash(user.password_hash, password):
-            login_user(user, remember=remember)
-            flash('Logged in successfully!', 'success')
-            return redirect(url_for('home'))  
-        else:
-            flash('Invalid email or password.', 'danger')
+        if not user or not bcrypt.check_password_hash(user.password_hash, password):
+            flash("Invalid email or password.", "danger")
+            return render_template("login.html", form=form), 401
 
-    return render_template('login.html', form=form)
+        login_user(
+            user,
+            remember=remember,
+            duration=timedelta(days=30)  # optional; can also set in app.config
+        )
+
+        next_page = request.args.get("next")
+        if not next_page or url_parse(next_page).netloc != "":
+            next_page = url_for("home")
+        flash("Logged in successfully!", "success")
+        return redirect(next_page)
+
+    return render_template("login.html", form=form)
 
 
 @auth.route('/logout', methods=['POST'])

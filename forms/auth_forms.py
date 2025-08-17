@@ -4,15 +4,16 @@ from wtforms.validators import DataRequired, Email, Length, Regexp
 
 class LoginForm(FlaskForm):
     email = StringField(
-        'Email',
-        validators=[DataRequired(), Email(message="Enter a valid email address")]
+        "Email address",
+        validators=[DataRequired(), Email(), Length(max=255)],
+        filters=[lambda x: x.strip().lower() if isinstance(x, str) else x]        # trims spaces before validation
     )
     password = PasswordField(
-        'Password',
-        validators=[DataRequired(), Length(min=6, message="Password must be at least 6 characters")]
+        "Password",
+        validators=[DataRequired(), Length(min=8, max=128)]
     )
-    remember = BooleanField('Remember Me')
-    submit = SubmitField('Login')
+    remember = BooleanField("Remember for 30 days")
+    submit = SubmitField("Sign in")
 
 
 class RegisterForm(FlaskForm):
@@ -28,10 +29,7 @@ class RegisterForm(FlaskForm):
         'Phone Number',
         validators=[
             DataRequired(), 
-            Regexp(
-            r'^[89]\d{7}$',  # starts with 8 or 9 + 7 more digits
-            message="Phone number must be 8 digits starting with 8 or 9, no space."
-            )
+            Regexp(r'^[89]\d{3}(?: ?\d{4})$', message="8 digits starting with 8 or 9; space optional (e.g., 9123 4567).")
         ]
     )
     password = PasswordField('Password', validators=[
