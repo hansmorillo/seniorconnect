@@ -1,7 +1,7 @@
 import os
 
 DB_USER = os.getenv('DB_USER', 'root')
-DB_PASSWORD = os.getenv('DB_PASSWORD', 'yourpassword')
+DB_PASSWORD = os.getenv('DB_PASSWORD', 'Suaymaknakha429-')
 DB_HOST = os.getenv('DB_HOST', 'localhost')
 DB_NAME = os.getenv('DB_NAME', 'seniorconnect')
 

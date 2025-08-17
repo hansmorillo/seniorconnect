@@ -1,5 +1,1211 @@
 {% extends "base.html" %}
 {% block content %}
-<h2>Manage Your Bookings</h2>
-<p>View, edit, or cancel your current and past bookings.</p>
+
+<!-- Custom Alert Container -->
+<div id="customAlertContainer" class="position-fixed top-0 start-50 translate-middle-x mt-4" style="z-index: 1055; max-width: 600px;"></div>
+
+<div class="container my-5">
+  <h2 class="mb-4 fw-semibold">Manage Your Bookings</h2>
+  
+  <!-- Upcoming Bookings Section -->
+  <div class="mb-5">
+    <h4 class="mb-3 d-flex align-items-center">
+      <span class="badge bg-success me-2">Upcoming</span>
+      Upcoming Bookings
+    </h4>
+    
+    <div id="upcomingBookings" class="booking-list">
+      {% if upcoming_bookings %}
+        {% for booking in upcoming_bookings %}
+        <div class="manage-booking-item card mb-3 shadow-sm" data-booking-id="{{ booking.id }}" data-status="{{ booking.status }}">
+          <div class="card-body d-flex align-items-center">
+            <!-- Location Icon -->
+            <div class="manage-location-icon me-3">
+              {% if booking.location == 'Indoor Sports Hall' %}
+                <div class="manage-icon-circle bg-danger"><i class="fas fa-dumbbell text-white"></i></div>
+              {% elif booking.location == 'Function Room' %}
+                <div class="manage-icon-circle bg-primary"><i class="fas fa-users text-white"></i></div>
+              {% else %}
+                <div class="manage-icon-circle bg-warning"><i class="fas fa-building text-white"></i></div>
+              {% endif %}
+            </div>
+            
+            <!-- Booking Details -->
+            <div class="flex-grow-1">
+              <h5 class="mb-1 fw-semibold">{{ booking.location }}</h5>
+              <p class="mb-1 text-muted">{{ booking.interest_group }} Interest Group</p>
+              <p class="mb-0">
+                <strong>{{ booking.booking_date.strftime('%d/%m/%Y') }}</strong>, 
+                <strong>{{ booking.time_slot }}</strong>
+              </p>
+            </div>
+            
+            <!-- Action Buttons -->
+            <div class="manage-booking-actions d-flex gap-2">
+              <button
+                class="btn {{ 'btn-outline-secondary' if booking.is_edit_locked else 'btn-outline-primary' }} rounded-pill px-3 py-1 edit-booking-btn"
+                data-booking-id="{{ booking.id }}"
+                data-booking-ref="{{ booking.reference_number }}"
+                data-locked="{{ '1' if booking.is_edit_locked else '0' }}"
+                {{ 'disabled' if booking.is_edit_locked else '' }}
+                title="{{ 'Edit locked (<24h to start)' if booking.is_edit_locked else 'Edit' }}"
+              >
+                {{ 'Edit (Locked)' if booking.is_edit_locked else 'Edit' }}
+              </button>
+
+              <button class="btn btn-outline-danger rounded-pill px-3 py-1 cancel-booking-btn"
+                      data-booking-id="{{ booking.id }}"
+                      data-booking-ref="{{ booking.reference_number }}">
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+        {% endfor %}
+      {% else %}
+        <div class="text-center py-5 text-muted">
+          <i class="fas fa-calendar-times fa-3x mb-3"></i>
+          <p>No upcoming bookings found.</p>
+          <a href="{{ url_for('booking.booking_main') }}" class="btn btn-custom-continue">Make a Booking</a>
+        </div>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- Past Bookings Section -->
+  <div class="mb-5">
+    <h4 class="mb-3 d-flex align-items-center">
+      <span class="badge bg-secondary me-2">Past</span>
+      Past Bookings
+    </h4>
+    
+    <div id="pastBookings" class="booking-list">
+      {% if past_bookings %}
+        {% for booking in past_bookings %}
+        <div class="manage-booking-item card mb-3 shadow-sm" data-booking-id="{{ booking.id }}" data-status="{{ booking.status }}">
+          <div class="card-body d-flex align-items-center">
+            <!-- Location Icon -->
+            <div class="manage-location-icon me-3">
+              {% if booking.location == 'Indoor Sports Hall' %}
+                <div class="manage-icon-circle bg-danger opacity-50"><i class="fas fa-dumbbell text-white"></i></div>
+              {% elif booking.location == 'Function Room' %}
+                <div class="manage-icon-circle bg-primary opacity-50"><i class="fas fa-users text-white"></i></div>
+              {% else %}
+                <div class="manage-icon-circle bg-warning opacity-50"><i class="fas fa-building text-white"></i></div>
+              {% endif %}
+            </div>
+            
+            <!-- Booking Details -->
+            <div class="flex-grow-1">
+              <h5 class="mb-1 fw-semibold text-muted">{{ booking.location }}</h5>
+              <p class="mb-1 text-muted">{{ booking.interest_group }} Interest Group</p>
+              <p class="mb-0 text-muted">
+                <strong>{{ booking.booking_date.strftime('%d/%m/%Y') }}</strong>, 
+                <strong>{{ booking.time_slot }}</strong>
+              </p>
+            </div>
+            
+            <!-- Status Badge -->
+            <div class="manage-booking-status">
+              {% if booking.status == 'completed' %}
+                <span class="badge bg-success">Completed</span>
+              {% elif booking.status == 'cancelled' %}
+                <span class="badge bg-danger">Cancelled</span>
+              {% endif %}
+            </div>
+            
+            <!-- Action Buttons -->
+            <div class="manage-booking-actions ms-3">
+              <button class="btn btn-outline-secondary btn-sm view-booking-btn" 
+                      data-booking-id="{{ booking.id }}">
+                View
+              </button>
+            </div>
+          </div>
+        </div>
+        {% endfor %}
+      {% else %}
+        <div class="text-center py-5 text-muted">
+          <i class="fas fa-history fa-3x mb-3"></i>
+          <p>No past bookings found.</p>
+        </div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+
+<!-- Edit Booking Modal -->
+<div class="modal fade" id="editBookingModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-lg modal-dialog-scrollable">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Edit Booking</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <form id="editBookingForm">
+          <input type="hidden" id="editBookingId" name="bookingId">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+          
+          <!-- Location Display (Read-only) -->
+          <div class="mb-4 p-3 bg-light rounded">
+            <label class="form-label fw-semibold">Location (Cannot be changed)</label>
+            <div class="d-flex align-items-center">
+              <div id="editLocationIcon" class="me-3"></div>
+              <div>
+                <h5 id="editLocationName" class="mb-0"></h5>
+                <small class="text-muted">To change location, please make a new booking</small>
+              </div>
+            </div>
+          </div>
+
+          <!-- Date & Time Section -->
+          <div class="mb-4 p-3 border rounded">
+            <h5 class="fw-semibold mb-3">Date & Time</h5>
+            
+            <!-- Current Date Display (moved up) -->
+            <div id="currentDateDisplay" class="mb-3">
+                <label class="form-label fw-semibold">Current Date Selected:</label>
+                <div class="p-2 bg-light rounded">
+                <div id="currentDateText" class="fw-semibold"></div>
+                </div>
+            </div>
+
+            <!-- Change Date Toggle -->
+            <div class="form-check form-switch mb-3">
+                <input class="form-check-input" type="checkbox" id="changeDateToggle">
+                <label class="form-check-label fw-semibold" for="changeDateToggle">Change Date</label>
+            </div>
+            
+            <!-- Date Picker (Hidden by default) -->
+            <div id="datePicker" class="mb-3 d-none">
+              <label class="form-label fw-semibold">Select New Date:</label>
+              <div class="d-flex justify-content-center">
+                <div class="manage-calendar-wrapper p-3 border rounded">
+                  <div class="d-flex justify-content-between align-items-center mb-3">
+                    <button type="button" id="editPrevMonth" class="btn btn-sm btn-outline-secondary px-2 py-0 fs-5">&lt;</button>
+                    <div id="editMonthYear" class="fw-bold"></div>
+                    <button type="button" id="editNextMonth" class="btn btn-sm btn-outline-secondary px-2 py-0 fs-5">&gt;</button>
+                  </div>
+                  <table class="table table-borderless text-center mb-0">
+                    <thead class="text-muted">
+                      <tr>
+                        <th>S</th><th>M</th><th>T</th><th>W</th><th>T</th><th>F</th><th>S</th>
+                      </tr>
+                    </thead>
+                    <tbody id="editCalendarBody"></tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+            
+            <!-- Time Slots -->
+            <div>
+              <label class="form-label fw-semibold">Select Time Slot:</label>
+              <div id="editTimeSlotContainer">
+                <div id="editLoadingSlots" class="text-center py-3 d-none">
+                  <div class="spinner-border spinner-border-sm me-2"></div>
+                  Loading available time slots...
+                </div>
+                <div id="editMorningSlots" class="mb-3 d-none">
+                  <div class="fw-semibold mb-2">Morning</div>
+                  <div class="d-flex flex-wrap gap-2" id="editMorningSlotButtons"></div>
+                </div>
+                <div id="editAfternoonSlots" class="mb-3 d-none">
+                  <div class="fw-semibold mb-2">Afternoon</div>
+                  <div class="d-flex flex-wrap gap-2" id="editAfternoonSlotButtons"></div>
+                </div>
+                <div id="editEveningSlots" class="mb-3 d-none">
+                  <div class="fw-semibold mb-2">Evening</div>
+                  <div class="d-flex flex-wrap gap-2" id="editEveningSlotButtons"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Event Details Section -->
+          <div class="mb-4 p-3 border rounded">
+            <h5 class="fw-semibold mb-3">Event Details</h5>
+            
+            <!-- Event Title -->
+            <div class="mb-3">
+              <label class="form-label fw-semibold">Event Title</label>
+              <div class="manage-editable-field" data-field="event_title">
+                <div class="manage-field-display d-flex align-items-center">
+                  <span class="manage-field-value me-2"></span>
+                  <button type="button" class="btn btn-sm btn-outline-secondary manage-edit-field-btn">
+                    <i class="fas fa-pencil-alt"></i>
+                  </button>
+                </div>
+                <div class="manage-field-edit d-none">
+                  <input type="text" class="form-control" name="event_title" required>
+                  <div class="mt-1">
+                    <button type="button" class="btn btn-sm btn-success manage-save-field-btn">Save</button>
+                    <button type="button" class="btn btn-sm btn-secondary manage-cancel-field-btn">Cancel</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Interest Group -->
+            <div class="mb-3">
+              <label class="form-label fw-semibold">Interest Group</label>
+              <select class="form-select" name="interest_group" required>
+                <option value="Yoga">Yoga</option>
+                <option value="Chess">Chess</option>
+                <option value="Taichi">Taichi</option>
+                <option value="Mahjong">Mahjong</option>
+                <option value="Gardening">Gardening</option>
+              </select>
+            </div>
+
+            <!-- Activity Type -->
+            <div class="mb-3">
+              <label class="form-label fw-semibold">Activity Type</label>
+              <select class="form-select" name="activity_type" required>
+                <option value="Workshop">Workshop</option>
+                <option value="Talk">Talk</option>
+                <option value="Performance">Performance</option>
+                <option value="Hands-on Session">Hands-on Session</option>
+                <option value="Meeting">Meeting</option>
+                <option value="Event">Event</option>
+                <option value="Others">Others</option>
+              </select>
+            </div>
+
+            <!-- Expected Attendees -->
+            <div class="mb-3">
+              <label class="form-label fw-semibold">Expected Number of Attendees</label>
+              <div class="manage-editable-field" data-field="expected_attendees">
+                <div class="manage-field-display d-flex align-items-center">
+                  <span class="manage-field-value me-2"></span>
+                  <button type="button" class="btn btn-sm btn-outline-secondary manage-edit-field-btn">
+                    <i class="fas fa-pencil-alt"></i>
+                  </button>
+                </div>
+                <div class="manage-field-edit d-none">
+                  <input type="number" class="form-control" name="expected_attendees" min="1" required>
+                  <div class="mt-1">
+                    <button type="button" class="btn btn-sm btn-success manage-save-field-btn">Save</button>
+                    <button type="button" class="btn btn-sm btn-secondary manage-cancel-field-btn">Cancel</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Equipment Required -->
+            <div class="mb-3">
+              <label class="form-label fw-semibold">Equipment Required</label>
+              <div class="manage-editable-field" data-field="equipment_required">
+                <div class="manage-field-display d-flex align-items-center">
+                  <span class="manage-field-value me-2"></span>
+                  <button type="button" class="btn btn-sm btn-outline-secondary manage-edit-field-btn">
+                    <i class="fas fa-pencil-alt"></i>
+                  </button>
+                </div>
+                <div class="manage-field-edit d-none">
+                  <textarea class="form-control" name="equipment_required" rows="3"></textarea>
+                  <div class="mt-1">
+                    <button type="button" class="btn btn-sm btn-success manage-save-field-btn">Save</button>
+                    <button type="button" class="btn btn-sm btn-secondary manage-cancel-field-btn">Cancel</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Event Description -->
+            <div class="mb-3">
+              <label class="form-label fw-semibold">Event Description</label>
+              <div class="manage-editable-field" data-field="event_description">
+                <div class="manage-field-display d-flex align-items-center">
+                  <span class="manage-field-value me-2"></span>
+                  <button type="button" class="btn btn-sm btn-outline-secondary manage-edit-field-btn">
+                    <i class="fas fa-pencil-alt"></i>
+                  </button>
+                </div>
+                <div class="manage-field-edit d-none">
+                  <textarea class="form-control" name="event_description" rows="3"></textarea>
+                  <div class="mt-1">
+                    <button type="button" class="btn btn-sm btn-success manage-save-field-btn">Save</button>
+                    <button type="button" class="btn btn-sm btn-secondary manage-cancel-field-btn">Cancel</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Organiser Details Section -->
+          <div class="mb-4 p-3 border rounded">
+            <h5 class="fw-semibold mb-3">Organiser Details</h5>
+            
+            <!-- Organiser Name -->
+            <div class="mb-3">
+              <label class="form-label fw-semibold">Organiser Name</label>
+              <div class="manage-editable-field" data-field="organiser_name">
+                <div class="manage-field-display d-flex align-items-center">
+                  <span class="manage-field-value me-2"></span>
+                  <button type="button" class="btn btn-sm btn-outline-secondary manage-edit-field-btn">
+                    <i class="fas fa-pencil-alt"></i>
+                  </button>
+                </div>
+                <div class="manage-field-edit d-none">
+                  <input type="text" class="form-control" name="organiser_name" required>
+                  <div class="mt-1">
+                    <button type="button" class="btn btn-sm btn-success manage-save-field-btn">Save</button>
+                    <button type="button" class="btn btn-sm btn-secondary manage-cancel-field-btn">Cancel</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Organiser Email -->
+            <div class="mb-3">
+              <label class="form-label fw-semibold">Organiser Email</label>
+              <div class="manage-editable-field" data-field="organiser_email">
+                <div class="manage-field-display d-flex align-items-center">
+                  <span class="manage-field-value me-2"></span>
+                  <button type="button" class="btn btn-sm btn-outline-secondary manage-edit-field-btn">
+                    <i class="fas fa-pencil-alt"></i>
+                  </button>
+                </div>
+                <div class="manage-field-edit d-none">
+                  <input type="email" class="form-control" name="organiser_email" required>
+                  <div class="mt-1">
+                    <button type="button" class="btn btn-sm btn-success manage-save-field-btn">Save</button>
+                    <button type="button" class="btn btn-sm btn-secondary manage-cancel-field-btn">Cancel</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Organiser Phone -->
+            <div class="mb-3">
+              <label class="form-label fw-semibold">Organiser Phone</label>
+              <div class="manage-editable-field" data-field="organiser_phone">
+                <div class="manage-field-display d-flex align-items-center">
+                  <span class="manage-field-value me-2"></span>
+                  <button type="button" class="btn btn-sm btn-outline-secondary manage-edit-field-btn">
+                    <i class="fas fa-pencil-alt"></i>
+                  </button>
+                </div>
+                <div class="manage-field-edit d-none">
+                  <input type="tel" class="form-control" name="organiser_phone" required>
+                  <div class="mt-1">
+                    <button type="button" class="btn btn-sm btn-success manage-save-field-btn">Save</button>
+                    <button type="button" class="btn btn-sm btn-secondary manage-cancel-field-btn">Cancel</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Accessibility Help -->
+            <div class="mb-3">
+              <label class="form-label fw-semibold">Accessibility or Setup Help Required?</label>
+              <div class="d-flex gap-3 mt-2">
+                <input type="radio" class="btn-check" name="accessibility_help" id="editHelpYes" value="Yes">
+                <label class="btn btn-outline-dark rounded-pill px-4 py-2" for="editHelpYes">Yes</label>
+                
+                <input type="radio" class="btn-check" name="accessibility_help" id="editHelpNo" value="No">
+                <label class="btn btn-outline-dark rounded-pill px-4 py-2" for="editHelpNo">No</label>
+              </div>
+            </div>
+          </div>
+        </form>
+      </div>
+      <!-- Modal footer buttons -->
+      <div class="modal-footer">
+        <button type="button" class="btn btn-outline-secondary rounded-pill px-4" data-bs-dismiss="modal">Cancel</button>
+        <button type="button" class="btn btn-custom-continue rounded-pill px-4" id="saveChangesBtn">Save Changes</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Confirm Changes Modal -->
+<div class="modal fade" id="confirmChangesModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Confirm Changes</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <p class="mb-3">Please review the changes you've made:</p>
+        <div id="changesSummary" class="bg-light p-3 rounded"></div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+        <button type="button" class="btn btn-success" id="confirmChangesBtn">Confirm Changes</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- View Booking Modal -->
+<div class="modal fade" id="viewBookingModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Booking Details</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body" id="viewBookingContent">
+        <!-- Content will be populated by JavaScript -->
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/js/all.min.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  // State management
+  let editingBookingData = null;
+  let originalBookingData = null;
+  let editCalendarDate = new Date();
+  let selectedEditDate = null;
+  let selectedEditTime = null;
+  let pendingChanges = {};
+
+  // Time slots data (same as in booking form)
+  const timeSlots = {
+    "Indoor Sports Hall": [
+      { label: "8:00 AM – 10:00 AM", period: "morning" },
+      { label: "10:30 AM – 12:30 PM", period: "morning" },
+      { label: "1:00 PM – 3:00 PM", period: "afternoon" },
+      { label: "3:30 PM – 5:30 PM", period: "afternoon" },
+      { label: "6:00 PM – 8:00 PM", period: "evening" },
+      { label: "8:30 PM – 10:30 PM", period: "evening" }
+    ],
+    "Function Room": [
+      { label: "8:00 AM – 9:00 AM", period: "morning" },
+      { label: "9:30 AM – 10:30 AM", period: "morning" },
+      { label: "11:00 AM – 12:00 PM", period: "morning" },
+      { label: "12:30 PM – 1:30 PM", period: "afternoon" },
+      { label: "2:00 PM – 3:00 PM", period: "afternoon" },
+      { label: "3:30 PM – 4:30 PM", period: "afternoon" },
+      { label: "5:00 PM – 6:00 PM", period: "evening" },
+      { label: "6:30 PM – 7:30 PM", period: "evening" },
+      { label: "8:00 PM – 9:00 PM", period: "evening" }
+    ],
+    "Multi-purpose Hall": [
+      { label: "8:00 AM – 9:30 AM", period: "morning" },
+      { label: "9:45 AM – 11:15 AM", period: "morning" },
+      { label: "11:30 AM – 1:00 PM", period: "morning" },
+      { label: "1:15 PM – 2:45 PM", period: "afternoon" },
+      { label: "3:00 PM – 4:30 PM", period: "afternoon" },
+      { label: "4:45 PM – 6:15 PM", period: "afternoon" },
+      { label: "6:30 PM – 8:00 PM", period: "evening" },
+      { label: "8:15 PM – 9:45 PM", period: "evening" }
+    ]
+  };
+
+  // Utility functions
+  function showAlert(type, message) {
+    const alert = document.createElement("div");
+    const alertClass = `alert-${type === "error" ? "error" : type}`;
+    
+    alert.className = `custom-alert ${alertClass}`;
+    alert.innerHTML = `
+      <span>${message}</span>
+      <button class="close-btn" onclick="this.parentElement.remove()">×</button>
+    `;
+    
+    document.getElementById('customAlertContainer').appendChild(alert);
+    setTimeout(() => alert.remove(), 5000);
+  }
+
+  function showConfirmAlert({ title = "Please confirm", message = "", confirmText = "Confirm", cancelText = "Cancel", onConfirm = () => {} }) {
+  const wrap = document.getElementById("customAlertContainer");
+  const alert = document.createElement("div");
+  alert.className = "custom-alert alert-info"; // same skin as your info alerts
+
+  alert.innerHTML = `
+    <div class="d-flex flex-column gap-2">
+      <div class="fw-semibold">${title}</div>
+      <div>${message}</div>
+      <div class="d-flex gap-2 mt-1">
+        <button type="button" class="btn btn-custom-continue rounded-pill px-4 py-1" id="confirmBtn">${confirmText}</button>
+        <button type="button" class="btn btn-outline-dark rounded-pill px-4 py-1" id="cancelBtn">${cancelText}</button>
+      </div>
+    </div>
+    <button class="close-btn" aria-label="Close">×</button>
+  `;
+
+  const close = () => alert.remove();
+  alert.querySelector(".close-btn").addEventListener("click", close);
+  alert.querySelector("#cancelBtn").addEventListener("click", close);
+  alert.querySelector("#confirmBtn").addEventListener("click", () => { try { onConfirm(); } finally { close(); } });
+
+  wrap.appendChild(alert);
+}
+
+  function startMinutesFromLabel(label) {
+    // Extract "9:00 AM" from "9:00 AM – 10:00 AM"
+    const start = label.split('-')[0].trim();
+    const [time, mer] = start.split(' ');
+    let [h, m] = time.split(':').map(Number);
+    if (mer.toUpperCase() === 'PM' && h !== 12) h += 12;
+    if (mer.toUpperCase() === 'AM' && h === 12) h = 0;
+    return h * 60 + (m || 0);
+  }
+
+  // Edit booking functionality
+  document.querySelectorAll('.edit-booking-btn').forEach(btn => {
+    btn.addEventListener('click', function () {
+      if (this.disabled || this.dataset.locked === '1') {
+        showAlert('info', 'This booking starts within 24 hours. You can cancel it, but editing is disabled.');
+        return;
+      }
+      const bookingId = this.dataset.bookingId;
+      loadBookingForEdit(bookingId);
+    });
+  });
+
+  // Cancel booking functionality
+  document.querySelectorAll('.cancel-booking-btn').forEach(btn => {
+    btn.addEventListener('click', function() {
+      const bookingId = this.dataset.bookingId;
+      const bookingRef = this.dataset.bookingRef;
+      
+      showConfirmAlert({
+        title: "Cancel booking?",
+        message: `Are you sure you want to cancel booking <strong>${bookingRef}</strong>? This action cannot be undone.`,
+        confirmText: "Yes, cancel",
+        cancelText: "Keep booking",
+        onConfirm: () => cancelBooking(bookingId)
+      });
+    });
+  });
+
+  // View booking functionality
+  document.querySelectorAll('.view-booking-btn').forEach(btn => {
+    btn.addEventListener('click', function() {
+      const bookingId = this.dataset.bookingId;
+      loadBookingForView(bookingId);
+    });
+  });
+
+  // Load booking data for editing
+  async function loadBookingForEdit(bookingId) {
+    try {
+      const response = await fetch(`/booking/get-booking/${bookingId}`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to load booking data');
+      }
+
+      const data = await response.json();
+      if (data.success) {
+        editingBookingData = data.booking;
+        originalBookingData = JSON.parse(JSON.stringify(data.booking)); // Deep copy
+        populateEditModal(editingBookingData);
+        new bootstrap.Modal(document.getElementById('editBookingModal')).show();
+      } else {
+        showAlert('error', data.error || 'Failed to load booking data');
+      }
+    } catch (error) {
+      console.error('Error loading booking:', error);
+      showAlert('error', 'Error loading booking data');
+    }
+  }
+
+  // Populate edit modal with booking data
+  async function populateEditModal(booking) {
+    document.getElementById('editBookingId').value = booking.id;
+    
+    // Set location display
+    const locationIcon = getLocationIcon(booking.location);
+    document.getElementById('editLocationIcon').innerHTML = locationIcon;
+    document.getElementById('editLocationName').textContent = booking.location;
+    
+    // Set current date
+    const bookingDate = new Date(booking.booking_date);
+    document.getElementById('currentDateText').textContent = bookingDate.toLocaleDateString('en-GB', {
+      day: 'numeric',
+      month: 'long',
+      year: 'numeric'
+    });
+    
+    selectedEditDate = booking.booking_date;
+    selectedEditTime = booking.time_slot;
+    
+    // Reset change date toggle
+    document.getElementById('changeDateToggle').checked = false;
+    document.getElementById('datePicker').classList.add('d-none');
+    
+    // Populate editable fields
+    populateEditableField('event_title', booking.event_title);
+    populateEditableField('expected_attendees', booking.expected_attendees);
+    populateEditableField('equipment_required', booking.equipment_required || 'No equipment required');
+    populateEditableField('event_description', booking.event_description || 'No description provided');
+    populateEditableField('organiser_name', booking.organiser_name);
+    populateEditableField('organiser_email', booking.organiser_email);
+    populateEditableField('organiser_phone', booking.organiser_phone);
+    
+    // Set dropdown values
+    document.querySelector('[name="interest_group"]').value = booking.interest_group;
+    document.querySelector('[name="activity_type"]').value = booking.activity_type;
+    
+    // Set radio button
+    document.querySelector(`[name="accessibility_help"][value="${booking.accessibility_help}"]`).checked = true;
+    
+    // Load initial time slots
+    await loadEditTimeSlots(booking.location, selectedEditDate);
+
+    if (date === originalBookingData.booking_date) {
+        selectedEditTime = originalBookingData.time_slot;
+    }
+    
+    // Reset pending changes
+    pendingChanges = {};
+  }
+
+  function populateEditableField(fieldName, value) {
+    const field = document.querySelector(`[data-field="${fieldName}"]`);
+    if (field) {
+      const valueSpan = field.querySelector('.manage-field-value');
+      valueSpan.textContent = value || 'Not specified';
+      
+      // Reset to display mode
+      field.querySelector('.manage-field-display').classList.remove('d-none');
+      field.querySelector('.manage-field-edit').classList.add('d-none');
+    }
+  }
+
+  function getLocationIcon(location) {
+    const icons = {
+      'Indoor Sports Hall': '<div class="manage-icon-circle bg-danger"><i class="fas fa-dumbbell text-white"></i></div>',
+      'Function Room': '<div class="manage-icon-circle bg-primary"><i class="fas fa-users text-white"></i></div>',
+      'Multi-purpose Hall': '<div class="manage-icon-circle bg-warning"><i class="fas fa-building text-white"></i></div>'
+    };
+    return icons[location] || '<div class="manage-icon-circle bg-secondary"><i class="fas fa-building text-white"></i></div>';
+  }
+
+  // Change date toggle functionality
+  document.getElementById('changeDateToggle').addEventListener('change', function() {
+    const datePicker = document.getElementById('datePicker');
+    if (this.checked) {
+      datePicker.classList.remove('d-none');
+      editCalendarDate = new Date();
+      renderEditCalendar(editCalendarDate);
+    } else {
+      datePicker.classList.add('d-none');
+      // Reset to original date and reload timeslots
+      selectedEditDate = originalBookingData.booking_date;
+      loadEditTimeSlots(editingBookingData.location, selectedEditDate);
+    }
+  });
+
+  // Calendar functionality for edit modal
+  function renderEditCalendar(date) {
+    const year = date.getFullYear();
+    const month = date.getMonth();
+    const firstDay = new Date(year, month, 1).getDay();
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    document.getElementById('editMonthYear').textContent = date.toLocaleString("default", {
+      month: "long",
+      year: "numeric"
+    });
+
+    const isCurrentMonth = year === today.getFullYear() && month === today.getMonth();
+    document.getElementById('editPrevMonth').style.visibility = isCurrentMonth ? "hidden" : "visible";
+
+    let html = "", day = 1;
+    for (let i = 0; i < 6; i++) {
+      html += "<tr>";
+      for (let j = 0; j < 7; j++) {
+        if (i === 0 && j < firstDay) {
+          html += "<td></td>";
+        } else if (day > daysInMonth) {
+          html += "<td></td>";
+        } else {
+          const thisDate = new Date(year, month, day);
+          thisDate.setHours(0, 0, 0, 0);
+          const isPast = thisDate < today;
+          const className = isPast ? "text-muted manage-disabled-date" : "manage-calendar-day";
+          const paddedMonth = String(month + 1).padStart(2, '0');
+          const paddedDay = String(day).padStart(2, '0');
+          const fullDateStr = `${year}-${paddedMonth}-${paddedDay}`;
+
+          html += `<td class="${className}" data-date="${fullDateStr}">${day}</td>`;
+          day++;
+        }
+      }
+      html += "</tr>";
+    }
+
+    document.getElementById('editCalendarBody').innerHTML = html;
+
+    // Add click handlers for calendar days
+    document.querySelectorAll('#editCalendarBody .manage-calendar-day').forEach(cell => {
+      cell.addEventListener('click', async () => {
+        // Remove previous selection
+        document.querySelectorAll('#editCalendarBody .manage-calendar-day').forEach(c => {
+          c.classList.remove('bg-primary', 'text-white');
+        });
+        
+        // Add selection to clicked date
+        cell.classList.add('bg-primary', 'text-white');
+        selectedEditDate = cell.getAttribute('data-date');
+        
+        // Reload time slots for new date
+        await loadEditTimeSlots(editingBookingData.location, selectedEditDate);
+        
+        // Reset time selection since date changed
+        selectedEditTime = null;
+      });
+    });
+  }
+
+  // Calendar navigation for edit modal
+  document.getElementById('editPrevMonth').addEventListener('click', () => {
+    editCalendarDate.setMonth(editCalendarDate.getMonth() - 1);
+    renderEditCalendar(editCalendarDate);
+  });
+
+  document.getElementById('editNextMonth').addEventListener('click', () => {
+    editCalendarDate.setMonth(editCalendarDate.getMonth() + 1);
+    renderEditCalendar(editCalendarDate);
+  });
+
+  // Load time slots for edit modal
+  async function loadEditTimeSlots(location, date) {
+    const loadingDiv = document.getElementById('editLoadingSlots');
+    loadingDiv.classList.remove('d-none');
+
+    // Helper function to parse time from label
+    function startMinutesFromLabel(label) {
+      // Extract "9:00 AM" from "9:00 AM – 10:00 AM"
+      const start = label.split('–')[0].trim();
+      const [time, mer] = start.split(' ');
+      let [h, m] = time.split(':').map(Number);
+      if (mer.toUpperCase() === 'PM' && h !== 12) h += 12;
+      if (mer.toUpperCase() === 'AM' && h === 12) h = 0;
+      return h * 60 + (m || 0);
+    }
+
+    try {
+      // Get booked timeslots for the date
+      const response = await fetch('/booking/check-availability', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRFToken': document.querySelector('[name=csrf_token]').value
+        },
+        body: JSON.stringify({
+          location: location,
+          date: date
+        })
+      });
+
+      const data = await response.json();
+      let bookedSlots = data.success ? data.booked_timeslots : [];
+      
+      // Don't mark current booking's timeslot as booked if it's the same date
+      if (date === originalBookingData.booking_date) {
+        bookedSlots = bookedSlots.filter(slot => slot !== originalBookingData.time_slot);
+      }
+
+      const slots = timeSlots[location];
+      const sections = {
+        morning: document.getElementById("editMorningSlotButtons"),
+        afternoon: document.getElementById("editAfternoonSlotButtons"),
+        evening: document.getElementById("editEveningSlotButtons")
+      };
+
+      // Check if selected date is today
+      const isToday = date === new Date().toISOString().slice(0,10);
+      const now = new Date();
+      const nowMin = now.getHours() * 60 + now.getMinutes();
+
+      // Reset sections
+      Object.keys(sections).forEach(period => {
+        sections[period].innerHTML = "";
+        document.getElementById("edit" + period.charAt(0).toUpperCase() + period.slice(1) + "Slots").classList.add("d-none");
+      });
+
+      // Populate slots
+      slots.forEach(slot => {
+        const slotStartMin = startMinutesFromLabel(slot.label);
+        const isPastToday = isToday && slotStartMin <= nowMin;
+        const isBooked = bookedSlots.includes(slot.label);
+        const isCurrentSlot = slot.label === originalBookingData.time_slot && date === originalBookingData.booking_date;
+
+        // Only disable if booked OR past today, but NOT if it's the current booking's slot
+        const shouldDisable = (isBooked || isPastToday) && !isCurrentSlot;
+        
+        const btn = document.createElement("button");
+        btn.className = shouldDisable
+          ? "btn btn-secondary manage-time-slot disabled"
+          : "btn btn-outline-dark manage-time-slot";
+        btn.type = "button";
+        btn.disabled = shouldDisable;
+        
+        if (isCurrentSlot) {
+          btn.className = "btn btn-success manage-time-slot"; // Show current selection in green
+          btn.innerHTML = `${slot.label} <small>(Current)</small>`;
+          selectedEditTime = slot.label; // Ensure current slot is selected
+        } else if (isPastToday && !isBooked) {
+          btn.textContent = `${slot.label} (Past)`;
+        } else if (isBooked) {
+          btn.textContent = `${slot.label} (Booked)`;
+        } else {
+          btn.textContent = slot.label;
+        }
+        
+        btn.setAttribute('data-timeslot', slot.label);
+        
+        if (!shouldDisable) {
+          btn.addEventListener('click', () => {
+            // Remove selection from all buttons
+            document.querySelectorAll('.manage-time-slot').forEach(b => {
+              b.classList.remove('btn-primary');
+              if (!b.disabled && !b.innerHTML.includes('(Current)')) {
+                b.className = 'btn btn-outline-dark manage-time-slot';
+              }
+            });
+            
+            // Select this button
+            if (!isCurrentSlot) {
+              btn.classList.add('btn-primary');
+              btn.classList.remove('btn-outline-dark');
+            }
+            
+            selectedEditTime = slot.label;
+          });
+        }
+        
+        sections[slot.period].appendChild(btn);
+        document.getElementById("edit" + slot.period.charAt(0).toUpperCase() + slot.period.slice(1) + "Slots").classList.remove("d-none");
+      });
+
+    } catch (error) {
+      console.error('Error loading timeslots:', error);
+      showAlert('error', 'Error loading available timeslots');
+    } finally {
+      loadingDiv.classList.add('d-none');
+    }
+  }
+
+  // Editable field functionality
+  document.addEventListener('click', function(e) {
+    if (e.target.classList.contains('manage-edit-field-btn') || e.target.closest('.manage-edit-field-btn')) {
+      const btn = e.target.classList.contains('manage-edit-field-btn') ? e.target : e.target.closest('.manage-edit-field-btn');
+      const field = btn.closest('.manage-editable-field');
+      const fieldName = field.dataset.field;
+      const currentValue = field.querySelector('.manage-field-value').textContent;
+      
+      // Switch to edit mode
+      field.querySelector('.manage-field-display').classList.add('d-none');
+      field.querySelector('.manage-field-edit').classList.remove('d-none');
+      
+      // Set current value in input
+      const input = field.querySelector('input, textarea');
+      input.value = currentValue === 'Not specified' || 
+                    currentValue === 'No equipment required' || 
+                    currentValue === 'No description provided' ? '' : currentValue;
+      input.focus();
+    }
+    
+    if (e.target.classList.contains('manage-save-field-btn')) {
+      const field = e.target.closest('.manage-editable-field');
+      const fieldName = field.dataset.field;
+      const input = field.querySelector('input, textarea');
+      const newValue = input.value.trim();
+      
+      // Update display
+      const valueSpan = field.querySelector('.manage-field-value');
+      valueSpan.textContent = newValue || 'Not specified';
+      
+      // Track change
+      if (newValue !== originalBookingData[fieldName]) {
+        pendingChanges[fieldName] = {
+          old: originalBookingData[fieldName] || 'Not specified',
+          new: newValue || 'Not specified'
+        };
+      } else {
+        delete pendingChanges[fieldName];
+      }
+      
+      // Switch back to display mode
+      field.querySelector('.manage-field-display').classList.remove('d-none');
+      field.querySelector('.manage-field-edit').classList.add('d-none');
+    }
+    
+    if (e.target.classList.contains('manage-cancel-field-btn')) {
+      const field = e.target.closest('.manage-editable-field');
+      
+      // Switch back to display mode without saving
+      field.querySelector('.manage-field-display').classList.remove('d-none');
+      field.querySelector('.manage-field-edit').classList.add('d-none');
+    }
+  });
+
+  // Save changes button
+  document.getElementById('saveChangesBtn').addEventListener('click', function() {
+    // Collect all changes
+    const changes = { ...pendingChanges };
+    
+    // Check for date/time changes
+    if (selectedEditDate !== originalBookingData.booking_date) {
+      changes.booking_date = {
+        old: new Date(originalBookingData.booking_date).toLocaleDateString('en-GB'),
+        new: new Date(selectedEditDate).toLocaleDateString('en-GB')
+      };
+    }
+    
+    if (selectedEditTime !== originalBookingData.time_slot) {
+      changes.time_slot = {
+        old: originalBookingData.time_slot,
+        new: selectedEditTime
+      };
+    }
+    
+    // Check dropdown changes
+    const interestGroup = document.querySelector('[name="interest_group"]').value;
+    if (interestGroup !== originalBookingData.interest_group) {
+      changes.interest_group = {
+        old: originalBookingData.interest_group,
+        new: interestGroup
+      };
+    }
+    
+    const activityType = document.querySelector('[name="activity_type"]').value;
+    if (activityType !== originalBookingData.activity_type) {
+      changes.activity_type = {
+        old: originalBookingData.activity_type,
+        new: activityType
+      };
+    }
+    
+    // Check radio button changes
+    const accessibilityHelp = document.querySelector('[name="accessibility_help"]:checked')?.value;
+    if (accessibilityHelp !== originalBookingData.accessibility_help) {
+      changes.accessibility_help = {
+        old: originalBookingData.accessibility_help,
+        new: accessibilityHelp
+      };
+    }
+    
+    if (Object.keys(changes).length === 0) {
+      showAlert('info', 'No changes detected.');
+      return;
+    }
+    
+    // Show confirmation modal
+    showChangesConfirmation(changes);
+  });
+
+  function showChangesConfirmation(changes) {
+    const summaryDiv = document.getElementById('changesSummary');
+    let html = '';
+    
+    for (const [field, change] of Object.entries(changes)) {
+      const fieldLabel = getFieldLabel(field);
+      html += `
+        <div class="manage-changes-item">
+          <strong>${fieldLabel}:</strong><br>
+          <small class="text-muted">From:</small> ${change.old}<br>
+          <small class="text-muted">To:</small> <strong>${change.new}</strong>
+        </div>
+      `;
+    }
+    
+    summaryDiv.innerHTML = html;
+    
+    // Store changes for confirmation
+    window.pendingConfirmChanges = {
+      bookingId: editingBookingData.id,
+      changes: changes,
+      formData: {
+        booking_date: selectedEditDate,
+        time_slot: selectedEditTime,
+        event_title: document.querySelector('[data-field="event_title"] .manage-field-value').textContent,
+        interest_group: document.querySelector('[name="interest_group"]').value,
+        activity_type: document.querySelector('[name="activity_type"]').value,
+        expected_attendees: parseInt(document.querySelector('[data-field="expected_attendees"] .manage-field-value').textContent),
+        equipment_required: document.querySelector('[data-field="equipment_required"] .manage-field-value').textContent,
+        event_description: document.querySelector('[data-field="event_description"] .manage-field-value').textContent,
+        organiser_name: document.querySelector('[data-field="organiser_name"] .manage-field-value').textContent,
+        organiser_email: document.querySelector('[data-field="organiser_email"] .manage-field-value').textContent,
+        organiser_phone: document.querySelector('[data-field="organiser_phone"] .manage-field-value').textContent,
+        accessibility_help: document.querySelector('[name="accessibility_help"]:checked')?.value
+      }
+    };
+    
+    new bootstrap.Modal(document.getElementById('confirmChangesModal')).show();
+  }
+
+  function getFieldLabel(fieldName) {
+    const labels = {
+      'booking_date': 'Booking Date',
+      'time_slot': 'Time Slot',
+      'event_title': 'Event Title',
+      'interest_group': 'Interest Group',
+      'activity_type': 'Activity Type',
+      'expected_attendees': 'Expected Attendees',
+      'equipment_required': 'Equipment Required',
+      'event_description': 'Event Description',
+      'organiser_name': 'Organiser Name',
+      'organiser_email': 'Organiser Email',
+      'organiser_phone': 'Organiser Phone',
+      'accessibility_help': 'Accessibility Help'
+    };
+    return labels[fieldName] || fieldName;
+  }
+
+  // Confirm changes button
+  document.getElementById('confirmChangesBtn').addEventListener('click', async function() {
+    const { bookingId, formData } = window.pendingConfirmChanges;
+    
+    try {
+      this.disabled = true;
+      this.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Saving...';
+      
+      const response = await fetch(`/booking/update-booking/${bookingId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRFToken': document.querySelector('[name=csrf_token]').value
+        },
+        body: JSON.stringify(formData)
+      });
+      
+      const data = await response.json();
+      
+      if (data.success) {
+        showAlert('success', 'Booking updated successfully!');
+        
+        // Close modals
+        bootstrap.Modal.getInstance(document.getElementById('confirmChangesModal')).hide();
+        bootstrap.Modal.getInstance(document.getElementById('editBookingModal')).hide();
+        
+        // Refresh the page to show updated booking
+        setTimeout(() => {
+          window.location.reload();
+        }, 1500);
+        
+      } else {
+        showAlert('error', data.error || 'Failed to update booking');
+      }
+      
+    } catch (error) {
+      console.error('Error updating booking:', error);
+      showAlert('error', 'Error updating booking');
+    } finally {
+      this.disabled = false;
+      this.innerHTML = 'Confirm Changes';
+    }
+  });
+
+  // Cancel booking function
+  async function cancelBooking(bookingId) {
+    try {
+      const response = await fetch(`/booking/cancel-booking/${bookingId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRFToken': document.querySelector('[name=csrf_token]').value
+        }
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        showAlert('success', 'Booking cancelled successfully!');
+        
+        // Remove the booking from the UI or refresh
+        setTimeout(() => {
+          window.location.reload();
+        }, 1500);
+        
+      } else {
+        showAlert('error', data.error || 'Failed to cancel booking');
+      }
+
+    } catch (error) {
+      console.error('Error cancelling booking:', error);
+      showAlert('error', 'Error cancelling booking');
+    }
+  }
+
+  // Load booking for view
+  async function loadBookingForView(bookingId) {
+    try {
+      const response = await fetch(`/booking/get-booking/${bookingId}`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to load booking data');
+      }
+
+      const data = await response.json();
+      if (data.success) {
+        populateViewModal(data.booking);
+        new bootstrap.Modal(document.getElementById('viewBookingModal')).show();
+      } else {
+        showAlert('error', data.error || 'Failed to load booking data');
+      }
+    } catch (error) {
+      console.error('Error loading booking:', error);
+      showAlert('error', 'Error loading booking data');
+    }
+  }
+
+  function populateViewModal(booking) {
+    const bookingDate = new Date(booking.booking_date);
+    
+    const content = `
+      <div class="row">
+        <div class="col-md-6">
+          <h5>Event Details</h5>
+          <p><strong>Title:</strong> ${booking.event_title}</p>
+          <p><strong>Location:</strong> ${booking.location}</p>
+          <p><strong>Date:</strong> ${bookingDate.toLocaleDateString('en-GB', {
+            day: 'numeric',
+            month: 'long',
+            year: 'numeric'
+          })}</p>
+          <p><strong>Time:</strong> ${booking.time_slot}</p>
+          <p><strong>Interest Group:</strong> ${booking.interest_group}</p>
+          <p><strong>Activity Type:</strong> ${booking.activity_type}</p>
+          <p><strong>Expected Attendees:</strong> ${booking.expected_attendees}</p>
+        </div>
+        <div class="col-md-6">
+          <h5>Organiser Details</h5>
+          <p><strong>Name:</strong> ${booking.organiser_name}</p>
+          <p><strong>Email:</strong> ${booking.organiser_email}</p>
+          <p><strong>Phone:</strong> ${booking.organiser_phone}</p>
+          <p><strong>Accessibility Help:</strong> ${booking.accessibility_help}</p>
+          
+          <h5 class="mt-4">Additional Information</h5>
+          <p><strong>Equipment Required:</strong> ${booking.equipment_required || 'None'}</p>
+          <p><strong>Description:</strong> ${booking.event_description || 'No description provided'}</p>
+          <p><strong>Reference:</strong> ${booking.reference_number}</p>
+          <p><strong>Status:</strong> <span class="badge bg-${booking.status === 'completed' ? 'success' : booking.status === 'cancelled' ? 'danger' : 'primary'}">${booking.status.charAt(0).toUpperCase() + booking.status.slice(1)}</span></p>
+        </div>
+      </div>
+    `;
+    
+    document.getElementById('viewBookingContent').innerHTML = content;
+  }
+});
+</script>
+
 {% endblock %}

@@ -62,7 +62,7 @@ body, html {
   font-size: 20px; 
   color: #000;
   text-decoration: none;
-  border-right: 1px solid #e0e0e0;
+  border: none;
   background-color: #fff;
   transition: background-color 0.2s ease;
   cursor: pointer;
@@ -380,4 +380,127 @@ body, html {
 
 .booking-label {
   font-size: 1.1rem;
+}
+
+/* === BOOKING MANAGEMENT PAGE STYLES === */
+
+/* Booking items for management page */
+.manage-booking-item {
+  transition: all 0.3s ease;
+  border-left: 4px solid transparent;
+}
+
+.manage-booking-item:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.1) !important;
+  border-left-color: #0d6efd;
+}
+
+/* Location icons for management page */
+.manage-icon-circle {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Editable fields for management page */
+.manage-editable-field {
+  position: relative;
+}
+
+.manage-field-display {
+  min-height: 38px;
+  padding: 6px 12px;
+  background-color: #f8f9fa;
+  border: 1px solid #dee2e6;
+  border-radius: 0.375rem;
+}
+
+.manage-field-value {
+  flex-grow: 1;
+}
+
+/* Calendar wrapper for edit modal */
+.manage-calendar-wrapper {
+  width: 100%;
+  max-width: 660px;   /* was 300px */
+}
+
+.manage-calendar-day {
+  cursor: pointer;
+  padding: 8px;
+  border-radius: 4px;
+  transition: all 0.2s ease;
+}
+
+.manage-calendar-day:hover {
+  background-color: #e9ecef;
+}
+
+.manage-disabled-date {
+  color: #6c757d !important;
+  cursor: not-allowed;
+}
+
+/* Time slot buttons for management page */
+.manage-time-slot {
+  min-width: 140px;
+  font-size: 0.9rem;
+  border: 2px solid #186FAF;
+  border-radius: 12px;
+  padding: 10px 20px;
+  background-color: white;
+  color: #186FAF;
+  font-weight: 400;
+  transition: all 0.2s ease;
+  cursor: pointer;
+}
+
+.manage-time-slot:hover {
+  background-color: #e6f0fa;
+  color: #186FAF;
+}
+
+.manage-time-slot.btn-primary {
+  background-color: #186FAF;
+  color: white;
+  font-weight: 400;
+  border-color: #186FAF;
+}
+
+.manage-time-slot:disabled {
+  background-color: #6c757d;
+  border-color: #6c757d;
+  color: white;
+}
+
+/* Loading state for edit modal */
+#editLoadingSlots {
+  color: #6c757d;
+}
+
+/* Changes confirmation styling */
+.manage-changes-item {
+  padding: 8px 12px;
+  background-color: #fff3cd;
+  border-left: 4px solid #ffc107;
+  margin-bottom: 8px;
+  border-radius: 0.375rem;
+}
+
+/* Remove card border in booking management */
+.manage-booking-item.card {
+  border: none !important;
+  border-radius: 12px; /* still keep soft rounded corners */
+  box-shadow: 0 4px 12px rgba(0,0,0,0.08); /* subtle shadow instead of border */
+}
+
+/* Uniform button styles */
+.manage-booking-actions .btn {
+  border-radius: 20px; /* rounded rectangle */
+  font-size: 0.95rem;
+  padding: 6px 18px;
 }
