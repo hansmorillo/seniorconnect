@@ -3,12 +3,12 @@ from dotenv import load_dotenv
 from datetime import timedelta
 import os
 
-from extensions import db, bcrypt, login_manager, limiter, csrf
+from extensions import db, bcrypt, login_manager, csrf, limiter, mail
 from routes.auth_routes import auth
 from routes.event_routes import event
 from routes.user_routes import user
-from routes.booking_routes import booking
-from models.user import User
+from routes.booking_routes import booking  
+from models.user import User, PendingUser
 from models.booking import Booking
 from config import SQLALCHEMY_DATABASE_URI, SQLALCHEMY_TRACK_MODIFICATIONS
 from datetime import datetime
@@ -27,12 +27,22 @@ def create_app(test_config=None):
     app.config['SQLALCHEMY_DATABASE_URI'] = SQLALCHEMY_DATABASE_URI
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = SQLALCHEMY_TRACK_MODIFICATIONS
 
+    # ---------- Mail Configuration ----------
+    app.config['MAIL_SERVER'] = os.getenv('MAIL_SERVER', 'smtp.gmail.com')
+    app.config['MAIL_PORT'] = int(os.getenv('MAIL_PORT', '587'))
+    app.config['MAIL_USE_TLS'] = os.getenv('MAIL_USE_TLS', 'True').lower() == 'true'
+    app.config['MAIL_USE_SSL'] = os.getenv('MAIL_USE_SSL', 'False').lower() == 'true'
+    app.config['MAIL_USERNAME'] = os.getenv('MAIL_USERNAME')
+    app.config['MAIL_PASSWORD'] = os.getenv('MAIL_PASSWORD')
+    app.config['MAIL_DEFAULT_SENDER'] = os.getenv('MAIL_DEFAULT_SENDER', app.config['MAIL_USERNAME'])
+
     # ---------- Initialize Extensions ----------
     db.init_app(app)
     bcrypt.init_app(app)
     login_manager.init_app(app)
     csrf.init_app(app)
     limiter.init_app(app)
+    mail.init_app(app)
     login_manager.login_view = 'auth.login'
 
     # CSRF
@@ -58,9 +68,9 @@ def create_app(test_config=None):
     app.register_blueprint(auth)
     app.register_blueprint(event)
     app.register_blueprint(user)
-    app.register_blueprint(booking)
+    app.register_blueprint(booking)  
 
-    # ---------- Public Routes WITH Rate Limiting ----------
+
     @app.route('/')
     @limiter.limit("100 per minute")
     def home():
