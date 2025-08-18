@@ -13,19 +13,25 @@
   letter-spacing: .2px;
 }
 
+/* Use shared tokens for consistency */
+.main-navbar {
+  --nav-focus-outline: 2px solid rgba(255,255,255,.5);
+  --nav-underline-offset: .2rem;
+}
+
 /* Nav links: slightly bolder, clearer hover */
 .main-navbar .nav-link {
   font-weight: 500;
   padding: .5rem .6rem;
   transition: color .15s ease, opacity .15s ease, text-decoration-color .15s ease;
-  text-underline-offset: .2rem;
+  text-underline-offset: var(--nav-underline-offset);
 }
 .main-navbar .nav-link:hover,
 .main-navbar .nav-link:focus {
   text-decoration: underline;
 }
 
-/* Active state should be clearly visible on dark bg */
+/* Active state clearly visible on dark bg */
 .main-navbar .nav-link.active[aria-current="page"] {
   color: #fff;
   text-decoration: underline;
@@ -36,6 +42,13 @@
   line-height: 1.5;
   padding: .35rem .75rem;
   border-width: 1px;
+  border-color: rgba(255,255,255,.45);
+  color: #fff;
+  background: transparent;
+}
+.main-navbar .nav-logout-btn:hover {
+  background: rgba(255,255,255,.08);
+  border-color: rgba(255,255,255,.6);
 }
 
 /* On mobile, make the logout button full-width for easier tapping */
@@ -46,11 +59,17 @@
   }
 }
 
-/* Optional: improve focus visibility for accessibility */
+/* Improve focus visibility for accessibility */
 .main-navbar .btn:focus,
 .main-navbar .nav-link:focus,
 .main-navbar .navbar-toggler:focus {
-  outline: 2px solid rgba(255,255,255,.5);
+  outline: var(--nav-focus-outline);
   outline-offset: 2px;
   box-shadow: none;
+}
+
+/* Optional: a light underline accent using brand color when navbar is light */
+.main-navbar.navbar-light .nav-link.active[aria-current="page"] {
+  color: var(--brand);
+  text-decoration-color: var(--brand);
 }

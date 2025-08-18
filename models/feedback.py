@@ -1,7 +1,7 @@
 from extensions import db
 
 class Feedback(db.Model):
-    __tablename__ = 'feedback'
+    __tablename__ = 'feedbacks'
 
     id = db.Column(db.String(36), primary_key=True)
     user_id = db.Column(db.String(36), db.ForeignKey('users.id'), nullable=False)

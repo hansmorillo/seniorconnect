@@ -190,7 +190,7 @@ def feedback():
             print(f"✅ FEEDBACK SUBMITTED: User {current_user.id} - Subject: {sanitized_subject[:50]}...")
             
             flash('Your feedback has been submitted successfully!', 'success')
-            return render_template('feedback.html', submitted=True)
+            return redirect(url_for('user.feedback'))
             
         except Exception as e:
             db.session.rollback()

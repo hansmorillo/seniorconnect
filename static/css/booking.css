@@ -2,6 +2,7 @@ body, html {
   margin: 0;
   padding: 0;
   overflow-x: hidden;
+  overflow-y: auto;
 }
 
 /* === BOOKING PAGE === */
@@ -21,10 +22,16 @@ body, html {
 
 .form-overlay-wrapper {
   position: relative;
-  top: -100px;
+  top: 0px;
   display: flex;
   justify-content: center;
-  margin-bottom: -100px;
+  margin-bottom: 0px;
+  transform: translateY(-100px);
+}
+
+/* 3) Compensate the pulled-up card with real spacing after it */
+.form-overlay-spacer {
+  height: 100px; /* add a spacer div after the overlay section in HTML */
 }
 
 .booking-form-wrapper {
@@ -35,7 +42,7 @@ body, html {
   width: 100%;
   max-width: 1100px;
   box-shadow: 0 4px 20px rgba(0,0,0,0.08);
-  overflow: hidden;
+  overflow: visible;
   min-height: 80vh; /* extend beyond viewport */
 }
 

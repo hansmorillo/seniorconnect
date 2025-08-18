@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 
 {% block styles %}
-<link rel="stylesheet" href="{{ url_for('static', filename='css/booking.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/booking.css') }}?v=3">
 {% endblock %}
 
 {% block content %}
@@ -298,6 +298,7 @@
     </div>
   </form>
 </div>
+<div class="form-overlay-spacer"></div> <!-- prevent the need of negative margins -->
 
 <!-- Location Info Modal -->
 <div class="modal fade" id="locationInfoModal" tabindex="-1" aria-labelledby="locationInfoModalLabel" aria-hidden="true">

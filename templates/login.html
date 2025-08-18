@@ -25,14 +25,6 @@
     <h1 class="title">Welcome back</h1>
     <p class="subtitle">Please enter your details</p>
 
-    <!-- Optional Google button (disabled placeholder) -->
-    <button class="oauth-btn" type="button" disabled title="Coming soon">
-      <img src="https://www.gstatic.com/images/branding/product/1x/gsa_64dp.png" alt="G">
-      Sign in with Google
-    </button>
-
-    <div class="divider">or</div>
-
     <form method="post" action="{{ url_for('auth.login') }}" class="auth-form">
       {{ form.hidden_tag() }}
 
