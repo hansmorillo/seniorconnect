@@ -16,7 +16,16 @@ class Event(db.Model):
     updated_at = db.Column(db.DateTime)
 
 class RSVP(db.Model):
-    __tablename__ = 'rsvp'
+    __tablename__ = 'rsvps'  # <- plural to match DB schema
 
-    user_id = db.Column(db.String(36), db.ForeignKey('users.id'), primary_key=True)
-    event_id = db.Column(db.String(36), db.ForeignKey('events.id'), primary_key=True)
+    id = db.Column(db.String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    user_id = db.Column(db.String(36), db.ForeignKey('users.id', ondelete='CASCADE'), nullable=False)
+    event_id = db.Column(db.String(36), db.ForeignKey('events.id', ondelete='CASCADE'), nullable=False)
+    status = db.Column(db.String(50), nullable=False, default='confirmed')
+    rsvp_date = db.Column(db.DateTime, server_default=db.func.now(), nullable=False)
+    created_at = db.Column(db.DateTime, server_default=db.func.now(), nullable=False)
+    updated_at = db.Column(db.DateTime, server_default=db.func.now(), onupdate=db.func.now(), nullable=False)
+
+    __table_args__ = (
+        db.UniqueConstraint('user_id', 'event_id', name='uq_rsvps_user_event'),
+    )

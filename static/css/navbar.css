@@ -1,0 +1,56 @@
+/* Scope all tweaks to this navbar only */
+.main-navbar.navbar-dark {
+  /* Bootstrap 5.3 navbar CSS variables */
+  --bs-navbar-padding-y: .5rem;
+  --bs-navbar-color: rgba(255, 255, 255, .85);
+  --bs-navbar-hover-color: #fff;
+  --bs-navbar-brand-color: #fff;
+  --bs-navbar-brand-hover-color: #fff;
+}
+
+/* Brand polish */
+.main-navbar .navbar-brand {
+  letter-spacing: .2px;
+}
+
+/* Nav links: slightly bolder, clearer hover */
+.main-navbar .nav-link {
+  font-weight: 500;
+  padding: .5rem .6rem;
+  transition: color .15s ease, opacity .15s ease, text-decoration-color .15s ease;
+  text-underline-offset: .2rem;
+}
+.main-navbar .nav-link:hover,
+.main-navbar .nav-link:focus {
+  text-decoration: underline;
+}
+
+/* Active state should be clearly visible on dark bg */
+.main-navbar .nav-link.active[aria-current="page"] {
+  color: #fff;
+  text-decoration: underline;
+}
+
+/* Logout button sized to align visually with links */
+.main-navbar .nav-logout-btn {
+  line-height: 1.5;
+  padding: .35rem .75rem;
+  border-width: 1px;
+}
+
+/* On mobile, make the logout button full-width for easier tapping */
+@media (max-width: 991.98px) {
+  .main-navbar .nav-logout-btn {
+    width: 100%;
+    margin-top: .25rem;
+  }
+}
+
+/* Optional: improve focus visibility for accessibility */
+.main-navbar .btn:focus,
+.main-navbar .nav-link:focus,
+.main-navbar .navbar-toggler:focus {
+  outline: 2px solid rgba(255,255,255,.5);
+  outline-offset: 2px;
+  box-shadow: none;
+}

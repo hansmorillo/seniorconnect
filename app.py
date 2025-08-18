@@ -9,8 +9,6 @@ from routes.auth_routes import auth
 from routes.event_routes import event
 from routes.user_routes import user
 from routes.booking_routes import booking
-from routes.chat_routes import chat
-from routes.group_routes import group
 from models.user import User
 from config import SQLALCHEMY_DATABASE_URI, SQLALCHEMY_TRACK_MODIFICATIONS
 
@@ -68,6 +66,19 @@ def create_app(test_config=None):
     @limiter.limit("50 per minute")
     def about():
         return render_template('about.html')
+    
+    # ---------- Context Processors ------------------------------------------------
+    from forms.auth_forms import LogoutForm
+
+    @app.context_processor
+    def inject_logout_form():
+        """
+        Inject a LogoutForm instance into every template.
+
+        Used by the navbar to POST /logout with a valid CSRF token without having to
+        pass the form explicitly in each render_template(...).
+        """
+        return {"logout_form": LogoutForm()}
 
     # ---------- Health Check (No Rate Limiting) ----------
     @app.route('/health')

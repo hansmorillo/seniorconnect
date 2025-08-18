@@ -3,8 +3,9 @@ from flask_login import login_user, logout_user, login_required, current_user
 from models.user import User
 from extensions import db, bcrypt, limiter  # using shared instances from extensions.py
 import uuid
-from forms.auth_forms import LoginForm, RegisterForm
+from forms.auth_forms import LoginForm, RegisterForm, LogoutForm
 from datetime import timedelta
+from models.notifications import create_onboarding_notification
 
 auth = Blueprint('auth', __name__)
 
@@ -89,5 +90,9 @@ def login():
 @auth.route('/logout', methods=['POST'])
 @login_required
 def logout():
+    form = LogoutForm()
+    if not form.validate_on_submit():  # ensures CSRF is valid
+        abort(400)
     logout_user()
-    return redirect(url_for('auth.login'))
+    flash("Logged out.", "success")
+    return redirect(url_for("home"))

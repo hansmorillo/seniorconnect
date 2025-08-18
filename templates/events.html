@@ -11,7 +11,7 @@
             <div class="card shadow-sm h-100">
                 <img src="{{ url_for('events.uploaded_file', filename=event.image_url) 
                             if event.image_url 
-                            else url_for('static', filename='images/default_event.jpg') }}"
+                            else url_for('static', filename='images/event_images/default_event.jpg') }}"
                     class="card-img-top"
                     alt="{{ event.name }}">
                 <div class="card-body d-flex flex-column">

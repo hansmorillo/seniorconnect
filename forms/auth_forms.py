@@ -42,3 +42,6 @@ class RegisterForm(FlaskForm):
     ])      # Password Security
     submit = SubmitField('Register')
 
+class LogoutForm(FlaskForm):
+    # Field is optional; CSRF is what we need. A submit helps if you validate.
+    submit = SubmitField("Logout")
