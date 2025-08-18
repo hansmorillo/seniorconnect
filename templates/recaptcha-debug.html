@@ -1,0 +1,346 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>reCAPTCHA Debug Tool</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            line-height: 1.6;
+            background: #f8fafc;
+        }
+        .debug-container {
+            background: white;
+            border-radius: 12px;
+            padding: 24px;
+            margin: 20px 0;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        .status {
+            padding: 12px;
+            border-radius: 8px;
+            margin: 12px 0;
+            font-weight: 600;
+        }
+        .success { background: #d1fae5; color: #047857; border: 1px solid #6ee7b7; }
+        .error { background: #fee2e2; color: #dc2626; border: 1px solid #fca5a5; }
+        .warning { background: #fef3c7; color: #d97706; border: 1px solid #fde68a; }
+        .info { background: #dbeafe; color: #1d4ed8; border: 1px solid #93c5fd; }
+        
+        code {
+            background: #f1f5f9;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-family: 'Monaco', 'Menlo', monospace;
+        }
+        
+        .test-section {
+            margin: 20px 0;
+            padding: 16px;
+            border: 2px solid #e5e7eb;
+            border-radius: 8px;
+        }
+        
+        .captcha-test {
+            margin: 20px 0;
+            text-align: center;
+            min-height: 100px;
+            padding: 20px;
+            border: 2px dashed #d1d5db;
+            border-radius: 8px;
+        }
+        
+        button {
+            background: #3b82f6;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 6px;
+            cursor: pointer;
+            margin: 8px;
+        }
+        
+        button:hover {
+            background: #2563eb;
+        }
+        
+        .logs {
+            background: #1f2937;
+            color: #f9fafb;
+            padding: 16px;
+            border-radius: 8px;
+            font-family: monospace;
+            font-size: 14px;
+            max-height: 300px;
+            overflow-y: auto;
+            margin: 16px 0;
+        }
+    </style>
+</head>
+<body>
+    <h1>🔍 reCAPTCHA Debug Tool</h1>
+    
+    <div class="debug-container">
+        <h2>Environment Check</h2>
+        <div id="environmentStatus">Checking environment...</div>
+        
+        <h3>Test Keys (Replace with your actual keys)</h3>
+        <div class="test-section">
+            <label>Site Key: </label>
+            <input type="text" id="siteKey" placeholder="6Ld2SKor..." style="width: 300px; padding: 8px; margin: 8px;">
+            <br>
+            <button onclick="updateSiteKey()">Update Site Key</button>
+            <button onclick="loadRecaptcha()">Load reCAPTCHA</button>
+            <button onclick="renderRecaptcha()">Render Widget</button>
+        </div>
+        
+        <div class="captcha-test">
+            <div id="recaptcha-container"></div>
+            <div id="captcha-status">reCAPTCHA will appear here</div>
+        </div>
+        
+        <h3>Debug Actions</h3>
+        <button onclick="checkGrecaptcha()">Check grecaptcha Object</button>
+        <button onclick="checkConsole()">Check Console Errors</button>
+        <button onclick="testNetworkConnectivity()">Test Network</button>
+        <button onclick="clearAndReload()">Clear & Reload</button>
+        
+        <h3>Debug Logs</h3>
+        <div class="logs" id="debugLogs"></div>
+    </div>
+
+    <div class="debug-container">
+        <h2>Common Issues & Solutions</h2>
+        
+        <div class="status info">
+            <strong>Issue 1:</strong> Script loading problems
+            <br><strong>Solution:</strong> Check network connectivity and ensure script URL is correct
+        </div>
+        
+        <div class="status warning">
+            <strong>Issue 2:</strong> Wrong site key
+            <br><strong>Solution:</strong> Verify your site key matches your domain in Google Console
+        </div>
+        
+        <div class="status error">
+            <strong>Issue 3:</strong> Domain mismatch
+            <br><strong>Solution:</strong> Add localhost:5000 to authorized domains in Google reCAPTCHA Console
+        </div>
+        
+        <div class="status info">
+            <strong>Issue 4:</strong> Multiple script loads
+            <br><strong>Solution:</strong> Ensure script is only loaded once per page
+        </div>
+    </div>
+
+    <!-- reCAPTCHA Script -->
+    <script src="https://www.google.com/recaptcha/api.js?onload=onRecaptchaLoad&render=explicit" async defer></script>
+
+    <script>
+        let debugLogs = [];
+        let currentSiteKey = '6Ld2SKorAAAAAJZqvs5O4adEz7Z1Z4ql1JtXVj7H'; // Your key from .env
+        let widgetId = null;
+
+        function log(message, type = 'info') {
+            const timestamp = new Date().toLocaleTimeString();
+            const logEntry = `[${timestamp}] ${type.toUpperCase()}: ${message}`;
+            debugLogs.push(logEntry);
+            
+            const logsDiv = document.getElementById('debugLogs');
+            logsDiv.innerHTML = debugLogs.slice(-20).join('\n'); // Show last 20 logs
+            logsDiv.scrollTop = logsDiv.scrollHeight;
+            
+            console.log(logEntry);
+        }
+
+        function checkEnvironment() {
+            const status = document.getElementById('environmentStatus');
+            let statusHTML = '';
+            
+            // Check if we're on localhost
+            const isLocalhost = window.location.hostname === 'localhost' || 
+                              window.location.hostname === '127.0.0.1';
+            
+            statusHTML += `<div class="status ${isLocalhost ? 'success' : 'warning'}">
+                Domain: ${window.location.hostname} ${isLocalhost ? '✓' : '⚠ (May need domain authorization)'}
+            </div>`;
+            
+            // Check if script is loaded
+            const scriptExists = document.querySelector('script[src*="recaptcha/api.js"]');
+            statusHTML += `<div class="status ${scriptExists ? 'success' : 'error'}">
+                reCAPTCHA Script: ${scriptExists ? 'Loaded ✓' : 'Not Found ✗'}
+            </div>`;
+            
+            // Check if grecaptcha is available
+            const grecaptchaExists = typeof grecaptcha !== 'undefined';
+            statusHTML += `<div class="status ${grecaptchaExists ? 'success' : 'warning'}">
+                grecaptcha Object: ${grecaptchaExists ? 'Available ✓' : 'Not Ready ⏳'}
+            </div>`;
+            
+            status.innerHTML = statusHTML;
+            log('Environment check completed');
+        }
+
+        function updateSiteKey() {
+            const input = document.getElementById('siteKey');
+            if (input.value.trim()) {
+                currentSiteKey = input.value.trim();
+                log(`Site key updated to: ${currentSiteKey.substring(0, 20)}...`);
+            }
+        }
+
+        function loadRecaptcha() {
+            log('Attempting to load reCAPTCHA...');
+            
+            // Remove existing script if any
+            const existingScript = document.querySelector('script[src*="recaptcha/api.js"]');
+            if (existingScript) {
+                existingScript.remove();
+                log('Removed existing reCAPTCHA script');
+            }
+            
+            // Load fresh script
+            const script = document.createElement('script');
+            script.src = 'https://www.google.com/recaptcha/api.js?onload=onRecaptchaLoad&render=explicit';
+            script.async = true;
+            script.defer = true;
+            script.onerror = () => log('Failed to load reCAPTCHA script', 'error');
+            script.onload = () => log('reCAPTCHA script loaded successfully', 'success');
+            
+            document.head.appendChild(script);
+        }
+
+        function renderRecaptcha() {
+            if (typeof grecaptcha === 'undefined') {
+                log('grecaptcha not available - script may not be loaded', 'error');
+                return;
+            }
+            
+            log('Attempting to render reCAPTCHA widget...');
+            
+            try {
+                // Clear existing widget
+                if (widgetId !== null) {
+                    grecaptcha.reset(widgetId);
+                }
+                
+                const container = document.getElementById('recaptcha-container');
+                container.innerHTML = ''; // Clear container
+                
+                widgetId = grecaptcha.render(container, {
+                    'sitekey': currentSiteKey,
+                    'theme': 'light',
+                    'size': 'normal',
+                    'callback': function(response) {
+                        log(`reCAPTCHA solved! Response: ${response.substring(0, 20)}...`, 'success');
+                        document.getElementById('captcha-status').innerHTML = 
+                            '<span style="color: green;">✓ reCAPTCHA Solved!</span>';
+                    },
+                    'expired-callback': function() {
+                        log('reCAPTCHA expired', 'warning');
+                        document.getElementById('captcha-status').innerHTML = 
+                            '<span style="color: orange;">⚠ reCAPTCHA Expired</span>';
+                    },
+                    'error-callback': function() {
+                        log('reCAPTCHA error occurred', 'error');
+                        document.getElementById('captcha-status').innerHTML = 
+                            '<span style="color: red;">✗ reCAPTCHA Error</span>';
+                    }
+                });
+                
+                log('reCAPTCHA widget rendered successfully', 'success');
+                document.getElementById('captcha-status').innerHTML = 
+                    '<span style="color: blue;">🔄 Please solve the reCAPTCHA</span>';
+                    
+            } catch (error) {
+                log(`Error rendering reCAPTCHA: ${error.message}`, 'error');
+                document.getElementById('captcha-status').innerHTML = 
+                    `<span style="color: red;">Error: ${error.message}</span>`;
+            }
+        }
+
+        function checkGrecaptcha() {
+            if (typeof grecaptcha === 'undefined') {
+                log('grecaptcha object is undefined', 'error');
+                return;
+            }
+            
+            log('grecaptcha object details:', 'info');
+            log(`- typeof grecaptcha: ${typeof grecaptcha}`);
+            log(`- grecaptcha.render available: ${typeof grecaptcha.render === 'function'}`);
+            log(`- grecaptcha.getResponse available: ${typeof grecaptcha.getResponse === 'function'}`);
+            log(`- grecaptcha.reset available: ${typeof grecaptcha.reset === 'function'}`);
+        }
+
+        function checkConsole() {
+            log('Check browser console for additional errors', 'info');
+            
+            // Check for common console errors
+            if (window.console && console.error) {
+                log('Console is available - check Network tab for failed requests', 'info');
+            }
+        }
+
+        function testNetworkConnectivity() {
+            log('Testing network connectivity to Google...', 'info');
+            
+            fetch('https://www.google.com/recaptcha/api.js')
+                .then(response => {
+                    if (response.ok) {
+                        log('Network connectivity to Google reCAPTCHA: OK', 'success');
+                    } else {
+                        log(`Network error: ${response.status} ${response.statusText}`, 'error');
+                    }
+                })
+                .catch(error => {
+                    log(`Network connectivity failed: ${error.message}`, 'error');
+                });
+        }
+
+        function clearAndReload() {
+            log('Clearing and reloading...', 'info');
+            debugLogs = [];
+            document.getElementById('debugLogs').innerHTML = '';
+            document.getElementById('recaptcha-container').innerHTML = '';
+            document.getElementById('captcha-status').textContent = 'reCAPTCHA will appear here';
+            widgetId = null;
+            
+            setTimeout(() => {
+                checkEnvironment();
+                loadRecaptcha();
+            }, 100);
+        }
+
+        // Global callback for reCAPTCHA
+        window.onRecaptchaLoad = function() {
+            log('reCAPTCHA API loaded via callback', 'success');
+            checkEnvironment();
+        };
+
+        // Initialize when page loads
+        document.addEventListener('DOMContentLoaded', function() {
+            log('Debug tool initialized');
+            checkEnvironment();
+            
+            // Set the site key input to current value
+            document.getElementById('siteKey').value = currentSiteKey;
+            
+            // Auto-render after a short delay if grecaptcha is available
+            setTimeout(() => {
+                if (typeof grecaptcha !== 'undefined') {
+                    renderRecaptcha();
+                }
+            }, 2000);
+        });
+
+        // Log any global errors
+        window.addEventListener('error', function(e) {
+            log(`Global error: ${e.message} at ${e.filename}:${e.lineno}`, 'error');
+        });
+    </script>
+</body>
+</html>

@@ -21,9 +21,25 @@ def create_app(test_config=None):
     
     app.secret_key = os.getenv('SECRET_KEY', 'fallback_secret')
 
+
     # Database Setup
     app.config['SQLALCHEMY_DATABASE_URI'] = SQLALCHEMY_DATABASE_URI
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = SQLALCHEMY_TRACK_MODIFICATIONS
+
+    # reCAPTCHA Configuration
+    app.config['RECAPTCHA_PUBLIC_KEY'] = os.getenv('RECAPTCHA_PUBLIC_KEY')
+    app.config['RECAPTCHA_PRIVATE_KEY'] = os.getenv('RECAPTCHA_PRIVATE_KEY')
+    app.config['RECAPTCHA_USE_SSL'] = True
+    app.config['RECAPTCHA_OPTIONS'] = {'theme': 'light'}
+    app.config['RECAPTCHA_VERIFY_URL'] = 'https://www.google.com/recaptcha/api/siteverify'
+
+    # Verify keys are present
+    if not app.config['RECAPTCHA_PUBLIC_KEY'] or not app.config['RECAPTCHA_PRIVATE_KEY']:
+        raise ValueError("reCAPTCHA keys not configured")
+
+    # For testing environment
+    if app.config.get('TESTING'):
+        app.config['RECAPTCHA_DISABLE'] = True
 
     # ---------- Initialize Extensions ----------
     db.init_app(app)
@@ -105,7 +121,7 @@ def create_app(test_config=None):
                              description=e.description), 429
 
     return app
-
+            
 # ---------- Run App ----------
 if __name__ == '__main__':
     app = create_app()

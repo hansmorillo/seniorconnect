@@ -1,4 +1,4 @@
-# user_routes.py - FIXED VERSION - Proper Rate Limiter Import
+# user_routes.py - Updated with admin decorator
 from dotenv import load_dotenv
 load_dotenv()
 
@@ -13,8 +13,24 @@ from models.notifications import Notification
 import os
 from utils.security_utils import sanitize_input
 from flask_limiter.util import get_remote_address
+from functools import wraps
 
 user = Blueprint('user', __name__)
+
+# 🔒 ADMIN DECORATOR
+def admin_required(f):
+    """
+    Decorator to require admin privileges for a route
+    Usage: @admin_required (place after @login_required)
+    """
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if not current_user.is_authenticated:
+            abort(401)  # Unauthorized
+        if not getattr(current_user, 'is_admin', False):
+            abort(403)  # Forbidden
+        return f(*args, **kwargs)
+    return decorated_function
 
 # 🔒 HELPER FUNCTION to get limiter (avoids circular import)
 def get_limiter():
@@ -208,9 +224,10 @@ def feedback():
 
 @user.route('/feedback-display')
 @login_required
+@admin_required
 def feedback_display():
     """
-    Display feedback with pagination
+    Display feedback with pagination - ADMIN ONLY
     Security: All displayed content should be sanitized when stored
     """
     page = request.args.get('page', 1, type=int)
@@ -224,29 +241,21 @@ def feedback_display():
 
 @user.route('/feedback/<feedback_id>/delete', methods=['POST'])
 @login_required
+@admin_required
 def delete_feedback(feedback_id):
     """
-    Delete a specific feedback entry
-    Security: Ensures user can only delete their own feedback (if applicable)
-    or implement admin-only deletion
+    Delete a specific feedback entry - ADMIN ONLY
+    Security: Only admins can delete feedback
     """
     try:
         # Get the feedback entry
         feedback_entry = Feedback.query.get_or_404(feedback_id)
         
-        # Security check: Only allow the feedback owner or admin to delete
-        # Option 1: Only feedback owner can delete their own feedback
-        if feedback_entry.user_id != current_user.id:
-            # Check if user is admin (you'll need to implement is_admin property)
-            if not getattr(current_user, 'is_admin', False):
-                print(f"SECURITY WARNING: User {current_user.id} tried to delete feedback {feedback_id} owned by {feedback_entry.user_id}")
-                abort(403)
-        
         # Delete the feedback
         db.session.delete(feedback_entry)
         db.session.commit()
         
-        print(f"✅ FEEDBACK DELETED: User {current_user.id} deleted feedback {feedback_id}")
+        print(f"✅ FEEDBACK DELETED: Admin {current_user.id} deleted feedback {feedback_id}")
         flash('Feedback deleted successfully!', 'success')
         
     except Exception as e:

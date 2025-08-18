@@ -7,6 +7,7 @@
     --primary: #111111;             /* black button like reference */
     --primary-hover: #1f2937;
     --danger: #dc2626;
+    --success: #16a34a;
     --ring: rgba(17, 24, 39, .15);
     --radius: 16px;
     --shadow: 0 10px 30px rgba(2, 6, 23, .08);
@@ -144,7 +145,138 @@
     opacity: .95;
   }
   
-  /* Responsive: stack & keep image visible or hide if too small */
+  /* ---------- Login-specific styles ---------- */
+  .oauth-btn{
+    width: 100%;
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    border: 1px solid #e5e7eb;
+    background: #fff;
+    border-radius: 10px;
+    padding: 10px 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: border-color .15s ease, box-shadow .15s ease;
+  }
+  .oauth-btn:hover{
+    border-color: #d1d5db;
+  }
+  .oauth-btn img{
+    width: 18px;
+    height: 18px;
+  }
+  
+  .divider{
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    color: var(--muted);
+    font-size: 12px;
+    margin: 12px 0;
+  }
+  .divider::before,
+  .divider::after{
+    content: "";
+    height: 1px;
+    flex: 1;
+    background: #e5e7eb;
+  }
+  
+  .inline-row{
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  
+  .link-muted{
+    color: var(--text);
+    font-size: 14px;
+    text-decoration: none;
+    transition: color .15s ease;
+  }
+  .link-muted:hover{
+    text-decoration: underline;
+    color: var(--primary);
+  }
+  
+  /* ---------- Password Requirements Styling ---------- */
+  .password-requirements {
+    margin-top: 8px;
+    padding: 12px;
+    background: #f8f9fa;
+    border: 1px solid #e9ecef;
+    border-radius: 8px;
+    font-size: 13px;
+    transition: all .2s ease;
+  }
+
+  .password-requirements h4 {
+    margin: 0 0 8px 0;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--muted);
+  }
+
+  .requirement {
+    display: flex;
+    align-items: center;
+    margin-bottom: 4px;
+    color: var(--muted);
+    transition: color .2s ease;
+  }
+
+  .requirement:last-child {
+    margin-bottom: 0;
+  }
+
+  .requirement.valid {
+    color: var(--success);
+  }
+
+  .requirement.invalid {
+    color: var(--danger);
+  }
+
+  .requirement-icon {
+    width: 16px;
+    height: 16px;
+    margin-right: 8px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 10px;
+    font-weight: bold;
+    transition: all .2s ease;
+    flex-shrink: 0;
+  }
+
+  .requirement.valid .requirement-icon {
+    background: var(--success);
+    color: white;
+  }
+
+  .requirement.invalid .requirement-icon {
+    background: var(--danger);
+    color: white;
+  }
+
+  /* ---------- CAPTCHA Styling ---------- */
+  .captcha-container {
+    margin: 16px 0;
+    display: flex;
+    justify-content: center;
+  }
+
+  .g-recaptcha {
+    transform: scale(0.95);
+    transform-origin: 0 0;
+    border-radius: 8px;
+    overflow: hidden;
+  }
+
+  /* ---------- Responsive Design ---------- */
   @media (max-width: 992px){
     .split-auth{
       grid-template-columns: 1fr;
@@ -157,4 +289,27 @@
       padding: 24px 20px;
     }
   }
-  
+
+  @media (max-width: 480px) {
+    .g-recaptcha {
+      transform: scale(0.8);
+    }
+    
+    .auth-left {
+      padding: 20px 16px;
+    }
+    
+    .title {
+      font-size: 24px;
+    }
+    
+    .password-requirements {
+      padding: 10px;
+    }
+    
+    .requirement-icon {
+      width: 14px;
+      height: 14px;
+      font-size: 9px;
+    }
+  }
