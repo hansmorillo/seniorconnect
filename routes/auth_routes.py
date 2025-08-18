@@ -5,7 +5,6 @@ from extensions import db, bcrypt, limiter  # using shared instances from extens
 import uuid
 from forms.auth_forms import LoginForm, RegisterForm, LogoutForm
 from datetime import timedelta
-from models.notifications import create_onboarding_notification
 
 auth = Blueprint('auth', __name__)
 
