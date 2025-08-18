@@ -12,7 +12,7 @@ import logging, json
 
 ALLOWED_LOCATIONS = {"Indoor Sports Hall", "Function Room", "Multi-purpose Hall"}
 
-VALID_INTEREST_GROUPS = {"Yoga", "Chess", "Taichi", "Mahjong", "Gardening"}
+VALID_INTEREST_GROUPS = {"Yoga", "Chess", "Taichi", "Mahjong", "Gardening", "Silver Fitness", "Karaoke", "Crafting & Knitting", "Chinese Calligraphy", "Cooking", "Technology Learners", "Local Explorers", "Photography"}
 
 VALID_ACTIVITY_TYPES = {"Workshop", "Talk", "Performance", "Hands-on Session", "Meeting", "Event", "Others"}
 
@@ -99,7 +99,6 @@ def validate_booking_rules(location, date_str, time_slot):
         start_t = _parse_start_time_from_label(time_slot)
         if start_t and datetime.combine(booking_date, start_t) <= datetime.now():
             return False, "Cannot book a timeslot that has already started"
-
 
     valid_slots = TIME_SLOTS_BY_LOCATION.get(location, [])
     norm_time = _normalize_slot(time_slot)
