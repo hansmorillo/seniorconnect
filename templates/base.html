@@ -9,6 +9,7 @@
 
     {% block styles %}{% endblock %}
 </head>
+
 <body>
     <nav class="navbar navbar-expand-lg navbar-dark bg-dark sticky-top shadow-sm main-navbar mb-4">
         <div class="container-fluid">
@@ -49,6 +50,20 @@
                     aria-current="{{ 'page' if request.endpoint == 'user.weather' else 'false' }}"
                     href="{{ url_for('user.weather') }}">
                     Weather
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link {{ 'active' if request.endpoint == 'booking.booking_home' else '' }}"
+                      aria-current="{{ 'page' if request.endpoint == 'booking.booking_home' else 'false' }}"
+                      href="{{ url_for('booking.booking_main') }}">
+                      Booking
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link {{ 'active' if request.endpoint == 'booking.manage_bookings' else '' }}"
+                      aria-current="{{ 'page' if request.endpoint == 'booking.manage_bookings' else 'false' }}"
+                      href="{{ url_for('booking.booking_manage') }}">
+                      Manage Bookings
                     </a>
                 </li>
 

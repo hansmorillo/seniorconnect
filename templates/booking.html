@@ -1,5 +1,1233 @@
 {% extends "base.html" %}
 {% block content %}
-<h2>Location Booking</h2>
-<p>Start your booking process by selecting a category and location.</p>
+
+<!-- Banner -->
+<div class="banner-wrapper">
+  <img src="{{ url_for('static', filename='images/booking.jpg') }}" alt="Banner" class="banner-image">
+</div>
+
+<!-- Custom Alert Container -->
+<div id="customAlertContainer" class="position-fixed top-0 start-50 translate-middle-x mt-4" style="z-index: 1055; max-width: 600px;"></div>
+
+<!-- Main Form Wrapper -->
+<div class="form-overlay-wrapper px-0">
+  <form id="bookingForm" method="POST" action="{{ url_for('booking.booking_success') }}" class="booking-form-wrapper d-flex flex-column">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}"/>
+    
+    <!-- Tabs -->
+    <div class="tab-container">
+      <div class="row gx-0">
+        <div class="col text-center"><button type="button" class="tab-box active-tab" id="tabLocation" data-tab="location">Location</button></div>
+        <div class="col text-center"><button type="button" class="tab-box" id="tabDatetime" data-tab="datetime">Date & Time</button></div>
+        <div class="col text-center"><button type="button" class="tab-box" id="tabDetails" data-tab="details">Event Details</button></div>
+        <div class="col text-center"><button type="button" class="tab-box" id="tabOrganiser" data-tab="organiser">Organiser</button></div>
+        <div class="col text-center"><button type="button" class="tab-box" id="tabConfirmation" data-tab="confirmation">Confirmation</button></div>
+      </div>
+    </div>
+
+    <!-- Progress Indicator -->
+    <div id="progressWrapper" class="progress-steps-container mt-5 mb-4 px-5">
+      <div class="progress-line position-relative" style="height: 6px; background-color: #e0e0e0; border-radius: 3px;">
+        <div class="progress-fill" id="progressFill" style="position: absolute; top: 0; left: 0; height: 6px; background-color: #0d6efd; border-radius: 3px; width: 0%; transition: width 0.4s ease;"></div>
+        <div class="d-flex justify-content-between position-absolute w-100" style="top: -12px;">
+          {% for i in range(5) %}
+            <div class="step-circle" id="stepCircle{{ i }}"></div>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+
+    <!-- Hidden form fields for data storage -->
+    <input type="hidden" name="location" id="selectedLocation">
+    <input type="hidden" name="date" id="selectedDate">
+    <input type="hidden" name="time" id="selectedTime">
+
+    <!-- Location Section -->
+    <div id="locationSection" class="flex-grow-1 d-flex align-items-start justify-content-center flex-column pt-5 pb-4">
+      <div class="container text-center mt-4">
+        <div class="row justify-content-center">
+          <!-- Card 1 -->
+          <div class="col-md-3 mx-4 custom-card">
+            <img src="{{ url_for('static', filename='images/sports_hall.jpg') }}" class="rounded-circle card-img-top mb-3" alt="Sports Hall" style="width: 100px; height: 100px; object-fit: cover;">
+            <h5>Indoor Sports Hall</h5>
+            <button type="button" class="btn btn-outline-dark btn-sm mb-1" data-bs-toggle="modal" data-bs-target="#locationInfoModal">More info</button>
+            <p class="mb-2">For Large-scale Events</p>
+            <button type="button" class="btn btn-outline-primary btn-sm select-btn" data-location="Indoor Sports Hall">Select</button>
+          </div>
+
+          <!-- Card 2 -->
+          <div class="col-md-3 mx-4 custom-card">
+            <img src="{{ url_for('static', filename='images/function_room.jpg') }}" class="rounded-circle card-img-top mb-3" alt="Function Room" style="width: 100px; height: 100px; object-fit: cover;">
+            <h5>Function Room</h5>
+            <button type="button" class="btn btn-outline-dark btn-sm mb-1" data-bs-toggle="modal" data-bs-target="#locationInfoModal">More info</button>
+            <p class="mb-2">For Small-scale Events</p>
+            <button type="button" class="btn btn-outline-primary btn-sm select-btn" data-location="Function Room">Select</button>
+          </div>
+
+          <!-- Card 3 -->
+          <div class="col-md-3 mx-4 custom-card">
+            <img src="{{ url_for('static', filename='images/multipurpose.jpg') }}" class="rounded-circle card-img-top mb-3" alt="Multipurpose Hall" style="width: 100px; height: 100px; object-fit: cover;">
+            <h5>Multi-purpose Hall</h5>
+            <button type="button" class="btn btn-outline-dark btn-sm mb-1" data-bs-toggle="modal" data-bs-target="#locationInfoModal">More info</button>
+            <p class="mb-2">For Medium-scale Events</p>
+            <button type="button" class="btn btn-outline-primary btn-sm select-btn" data-location="Multi-purpose Hall">Select</button>
+          </div>
+        </div>
+
+        <!-- Continue Button -->
+        <div class="mt-5">
+          <button type="button" id="continueBtn" class="btn btn-custom-continue rounded-pill px-5 py-2 fs-5">Continue</button>
+          <div id="errorMsg" class="text-danger mt-2 d-none">Please select a location first.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Date & Time Section -->
+    <div id="datetimeSection" class="d-none flex-grow-1 pt-5 pb-4">
+      <div class="container">
+
+        <!-- Date Selection -->
+        <div class="mb-5">
+          <label class="fw-semibold mb-3 d-block section-label-lg">Select a Date</label>
+          <div class="d-flex justify-content-center">
+            <div class="custom-calendar-wrapper p-3 border rounded">
+              <div class="d-flex justify-content-between align-items-center mb-3">
+                <button type="button" id="prevMonth" class="btn btn-sm btn-outline-secondary px-2 py-0 fs-5">&lt;</button>
+                <div id="monthYear" class="fw-bold"></div>
+                <button type="button" id="nextMonth" class="btn btn-sm btn-outline-secondary px-2 py-0 fs-5">&gt;</button>
+              </div>
+              <table class="table table-borderless text-center mb-0">
+                <thead class="text-muted">
+                  <tr>
+                    <th>S</th><th>M</th><th>T</th><th>W</th><th>T</th><th>F</th><th>S</th>
+                  </tr>
+                </thead>
+                <tbody id="calendar-body"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <!-- Time Slot Selection -->
+        <div>
+          <label class="fw-semibold mb-3 d-block section-label-lg">Select a Time Slot</label>
+          <div id="timeSlotContainer">
+            <div id="morningSlots" class="mb-3 d-none">
+              <div class="fw-semibold mb-2">Morning</div>
+              <div class="d-flex flex-wrap gap-3" id="morningSlotButtons"></div>
+            </div>
+            <div id="afternoonSlots" class="mb-3 d-none">
+              <div class="fw-semibold mb-2">Afternoon</div>
+              <div class="d-flex flex-wrap gap-3" id="afternoonSlotButtons"></div>
+            </div>
+            <div id="eveningSlots" class="mb-3 d-none">
+              <div class="fw-semibold mb-2">Evening</div>
+              <div class="d-flex flex-wrap gap-3" id="eveningSlotButtons"></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="mt-5 text-center">
+          <button type="button" id="datetimeContinueBtn" class="btn btn-custom-continue rounded-pill px-5 py-2 fs-5">Continue</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Event Details Section -->
+    <div id="detailsSection" class="d-none">
+      <div class="container px-4">
+        <h4 class="mb-4 fw-semibold">Event Details</h4>
+
+        <div class="card p-4 mb-4 bg-light shadow-sm border-0">
+          <h5 class="fw-semibold mb-3">Event Info</h5>
+
+          <div class="mb-4">
+            <label for="eventTitle" class="form-label fw-semibold">Event Title</label>
+            <input type="text" id="eventTitle" name="eventTitle" class="form-control" placeholder="e.g. Yoga Workshop" required>
+          </div>
+
+          <div>
+            <label for="interestGroup" class="form-label fw-semibold">Interest Group</label>
+            <select id="interestGroup" name="interestGroup" class="form-select" required>
+              <option value="" selected disabled>Choose your interest group</option>
+              <option value="Yoga">Yoga</option>
+              <option value="Chess">Chess</option>
+              <option value="Taichi">Taichi</option>
+              <option value="Mahjong">Mahjong</option>
+              <option value="Gardening">Gardening</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="card p-4 bg-light shadow-sm border-0">
+          <h5 class="fw-semibold mb-3">Event Logistics</h5>
+
+          <div class="row">
+            <div class="col-md-6 mb-4">
+              <label for="attendees" class="form-label fw-semibold">Expected Number of Attendees</label>
+              <input type="number" id="attendees" name="attendees" class="form-control" min="1" placeholder="e.g. 30" required>
+            </div>
+
+            <div class="col-md-6 mb-4">
+              <label for="activityType" class="form-label fw-semibold">Type of Activity</label>
+              <select id="activityType" name="activityType" class="form-select" required>
+                <option value="" selected disabled>Select an activity type</option>
+                <option value="Workshop">Workshop</option>
+                <option value="Talk">Talk</option>
+                <option value="Performance">Performance</option>
+                <option value="Hands-on Session">Hands-on Session</option>
+                <option value="Meeting">Meeting</option>
+                <option value="Event">Event</option>
+                <option value="Others">Others</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="mb-4">
+            <label for="equipment" class="form-label fw-semibold">Equipment Required (Optional)</label>
+            <textarea id="equipment" name="equipment" class="form-control" rows="3" placeholder="E.g. - Microphone x2"></textarea>
+          </div>
+
+          <div>
+            <label for="description" class="form-label fw-semibold">Short Description <span class="text-muted">(Optional)</span></label>
+            <textarea id="description" name="description" class="form-control" rows="3" placeholder="Provide any additional details..."></textarea>
+          </div>
+        </div>
+
+        <div class="mt-5 text-center">
+          <button type="button" id="detailsContinueBtn" class="btn btn-custom-continue rounded-pill px-5 py-2 fs-5">Continue</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Organiser Section -->
+    <div id="organiserSection" class="d-none">
+      <div class="container px-4">
+        <h4 class="mb-4 fw-semibold">Organiser Details</h4>
+
+        <div class="card p-4 bg-light shadow-sm border-0">
+          <div class="mb-4">
+            <label for="organiserName" class="form-label fw-semibold">Organiser Name</label>
+            <input type="text" id="organiserName" name="organiserName" class="form-control" placeholder="e.g. Mary Tan" required>
+          </div>
+
+          <div class="mb-4">
+            <label for="organiserEmail" class="form-label fw-semibold">Organiser Email</label>
+            <input type="email" id="organiserEmail" name="organiserEmail" class="form-control" placeholder="e.g. name@gmail.com" required>
+          </div>
+
+          <div class="mb-4">
+            <label for="organiserPhone" class="form-label fw-semibold">Organiser Phone</label>
+            <input type="tel" id="organiserPhone" name="organiserPhone" class="form-control" placeholder="e.g. 91234567" required>
+          </div>
+
+          <div class="mb-4">
+            <label class="form-label d-block mb-3 fw-semibold">Accessibility or Setup Help Required?</label>
+            <div class="d-flex gap-3 flex-wrap">
+              <input type="radio" class="btn-check" name="accessibilityHelp" id="helpYes" value="Yes">
+              <label class="btn btn-outline-dark rounded-pill px-4 py-2" for="helpYes">Yes</label>
+
+              <input type="radio" class="btn-check" name="accessibilityHelp" id="helpNo" value="No">
+              <label class="btn btn-outline-dark rounded-pill px-4 py-2" for="helpNo">No</label>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="text-center mt-5">
+        <button type="button" id="organiserContinueBtn" class="btn btn-custom-continue rounded-pill px-5 py-2 fs-5">Continue</button>
+      </div>
+    </div>
+
+    <!-- Confirmation Section -->
+    <div id="confirmationSection" class="d-none container my-5">
+      <h2 class="text-center mb-4" style="font-size: 2rem;">You're almost there!</h2>
+      <h5 class="text-center mb-4">Please confirm details of your booking and proceed by clicking the Confirm Booking button.</h5>
+
+      <div class="p-4 rounded shadow-sm" style="background-color: #f8f9fc;">
+        <div class="row">
+          <div class="col-md-5">
+            <img id="confirmationImage" src="" alt="Selected Location" class="img-fluid rounded shadow-sm mb-3" />
+            <h2 id="confirmationLocation" class="mb-2"></h2>
+            <div class="p-3 rounded shadow-sm bg-white">
+              <p><span class="fw-semibold confirmation-titles">Date:</span> <span id="confirmationDate"></span></p>
+              <p><span class="fw-semibold confirmation-titles">Time:</span> <span id="confirmationTime"></span></p>
+            </div>
+          </div>
+
+          <div class="col-md-7">
+            <div class="p-3">
+              <h3 class="mb-3">Event Details</h3>
+              <p><span class="fw-semibold confirmation-titles">Title:</span> <span id="confirmationTitle"></span></p>
+              <p><span class="fw-semibold confirmation-titles">Group:</span> <span id="confirmationGroup"></span></p>
+              <p><span class="fw-semibold confirmation-titles">Activity Type:</span> <span id="confirmationActivity"></span></p>
+              <p><span class="fw-semibold confirmation-titles">Attendees:</span> <span id="confirmationAttendees"></span></p>
+              <p><span class="fw-semibold confirmation-titles">Equipment:</span> <span id="confirmationEquipment"></span></p>
+              <p><span class="fw-semibold confirmation-titles">Description:</span> <span id="confirmationDescription"></span></p>
+
+              <hr class="my-3">
+
+              <h3 class="mb-3">Organiser Info</h3>
+              <p><span class="fw-semibold confirmation-titles">Name:</span> <span id="confirmationOrgName"></span></p>
+              <p><span class="fw-semibold confirmation-titles">Email:</span> <span id="confirmationOrgEmail"></span></p>
+              <p><span class="fw-semibold confirmation-titles">Phone:</span> <span id="confirmationOrgPhone"></span></p>
+              <p><span class="fw-semibold confirmation-titles">Accessibility Help:</span> <span id="confirmationHelp"></span></p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Submit Button -->
+      <div class="text-center mt-5">
+        <button type="submit" id="finalConfirmBtn" class="btn btn-custom-continue rounded-pill px-5 py-2 fs-5">
+          Confirm Booking
+        </button>
+      </div>
+    </div>
+  </form>
+</div>
+
+<!-- Location Info Modal -->
+<div class="modal fade" id="locationInfoModal" tabindex="-1" aria-labelledby="locationInfoModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg modal-dialog-centered">
+    <div class="modal-content p-5">
+      <div class="d-flex justify-content-between align-items-center mb-3">
+        <h5 id="locationInfoModalLabel" class="fw-bold mb-0">Location Title</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+
+      <div class="row gx-4 mb-3">
+        <div class="col-md-6">
+          <img id="locationInfoImage" src="" alt="Location Image" class="img-fluid rounded" style="object-fit: cover; width: 100%;">
+        </div>
+        <div class="col-md-6 text-start">
+          <h6 class="fw-bold fs-6">Venue Overview:</h6>
+          <ul class="mb-0 ps-3" id="venueOverview"></ul>
+        </div>
+      </div>
+
+      <div class="row">
+        <div class="col-12 text-start">
+          <h6 class="fw-bold mt-4 fs-6">Facilities Available:</h6>
+          <ul class="row ps-3" id="facilitiesList" style="list-style-type: disc; padding-left: 1.5rem;"></ul>
+
+          <h6 class="fw-bold mt-4 fs-6">Booking Guidelines:</h6>
+          <ul class="ps-3" id="bookingGuidelines" style="list-style-type: disc;"></ul>
+
+          <h6 class="fw-bold mt-4 fs-6">Suggestions for Best Use:</h6>
+          <p id="bestUseText" class="mb-0"></p>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+{% block script %}
+<!-- Custom JS -->
+  <script>
+  document.addEventListener("DOMContentLoaded", function () {
+    const cards = document.querySelectorAll(".custom-card");
+    const modal = new bootstrap.Modal(document.getElementById("locationInfoModal"));
+    const modalTitle = document.getElementById("locationInfoModalLabel");
+    const modalImage = document.getElementById("locationInfoImage");
+    const venueOverview = document.getElementById("venueOverview");
+    const facilitiesList = document.getElementById("facilitiesList");
+    const bookingGuidelines = document.getElementById("bookingGuidelines");
+    const bestUseText = document.getElementById("bestUseText");
+    const progressFill = document.querySelector(".progress-fill");
+
+    const locationData = {
+      "Indoor Sports Hall": {
+        image: "/static/images/sports_hall.jpg",
+        overview: [
+          "Capacity: Up to 500 people",
+          "Suitable for: Sports tournaments, large community events",
+          "Room Layout: Court with retractable stage"
+        ],
+        facilities: [
+          "Air-conditioned", "Retractable bleachers", "Stage & PA system", "Sports flooring"
+        ],
+        guidelines: [
+          "Minimum booking: 2 hours",
+          "Available from 8:00 AM to 10:30 PM",
+        ],
+        bestUse: "The Indoor Sports Hall is ideal for large-scale activities such as sports meets, interschool competitions, or community carnivals."
+      },
+      "Function Room": {
+        image: "/static/images/function_room.jpg",
+        overview: [
+          "Capacity: Up to 40 people",
+          "Suitable for: Workshops, interest group meetings, screenings",
+          "Room Layout: Flexible (theatre or classroom)"
+        ],
+        facilities: [
+          "Air-conditioned", "Projector + retractable screen", "Whiteboard & flip chart", "Wi-Fi & wheelchair accessible"
+        ],
+        guidelines: [
+          "Minimum booking: 1 hour",
+          "Available from 8:00 AM to 9:00 PM",
+        ],
+        bestUse: "This room is ideal for intimate sessions like book clubs, workshops, or talks in a quiet and professional setting."
+      },
+      "Multi-purpose Hall": {
+        image: "/static/images/multipurpose.jpg",
+        overview: [
+          "Capacity: Up to 150 people",
+          "Suitable for: Medium-scale events like performances, talks, or celebrations",
+          "Room Layout: Flexible seating and stage arrangement"
+        ],
+        facilities: [
+          "Lighting & sound system", "Air-conditioned", "Stackable chairs", "Stage options"
+        ],
+        guidelines: [
+          "Minimum booking: 1.5 hours",
+          "Available 8:00 AM – 9:45 PM",
+        ],
+        bestUse: "Best for talent shows, school concerts, mid-sized events like festive celebrations and community showcases."
+      }
+    };
+
+    cards.forEach(card => {
+      const [moreInfoBtn, selectBtn] = card.querySelectorAll(".btn");
+
+      selectBtn.addEventListener("click", () => {
+        cards.forEach(c => {
+          const [_, selBtn] = c.querySelectorAll(".btn");
+          c.classList.remove("selected");
+          selBtn.classList.remove("btn-primary");
+          selBtn.classList.add("btn-outline-primary");
+          selBtn.textContent = "Select";
+        });
+
+        card.classList.add("selected");
+        selectBtn.classList.remove("btn-outline-primary");
+        selectBtn.classList.add("btn-primary");
+        selectBtn.textContent = "Selected";
+
+        progressFill.style.width = "20%";
+      });
+
+      moreInfoBtn.addEventListener("click", () => {
+        const title = card.querySelector("h5").textContent.trim();
+        const info = locationData[title];
+
+        modalTitle.textContent = title;
+        modalImage.src = info.image;
+
+        venueOverview.innerHTML = info.overview.map(i => `<li>${i}</li>`).join("");
+        facilitiesList.innerHTML = info.facilities.map(i => `<li>${i}</li>`).join("");
+        bookingGuidelines.innerHTML = info.guidelines.map(i => `<li>${i}</li>`).join("");
+        bestUseText.textContent = info.bestUse;
+
+        modal.show();
+      });
+    });
+  });
+</script>
+{% endblock %}
+
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+  // ===== FORM STATE MANAGEMENT =====
+  const formState = {
+    currentStep: 0,
+    selectedLocation: null,
+    selectedDate: null,
+    selectedTime: null,
+    locationSelected: false,
+    dateSelected: false,
+    timeSelected: false,
+    hasSelectedLocationBefore: false,
+    selectedCalendarTd: null,
+    calendarDate: new Date(),
+    filledFields: { title: false, group: false, attendees: false, activity: false },
+    organiserFilled: { name: false, email: false, phone: false, help: false },
+    bookedTimeslots: [], // Track booked timeslots for security
+    isSubmitting: false // Prevent double submission
+  };
+
+  // Store original values for validation against tampering
+  let originalFormData = {};
+
+  // ===== SECURITY: PREVENT CONSOLE MANIPULATION =====
+  function secureFormState() {
+    // Monitor for DOM manipulation attempts
+    const observer = new MutationObserver((mutations) => {
+      mutations.forEach((mutation) => {
+        if (mutation.type === 'attributes' &&
+            mutation.target.classList.contains('time-slot') &&
+            mutation.attributeName === 'class') {
+          // Re-validate timeslot availability if someone tries to manipulate the DOM
+          validateCurrentSelections();
+        }
+      });
+    });
+    
+    observer.observe(document.body, {
+      attributes: true,
+      subtree: true,
+      attributeFilter: ['class', 'style', 'disabled']
+    });
+  }
+
+  // ===== AVAILABILITY CHECKING =====
+  async function checkTimeslotAvailability(location, date) {
+    if (!location || !date) return [];
+    
+    try {
+      elements.loadingSlots.classList.remove('d-none');
+      
+      const response = await fetch('/booking/check-availability', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRFToken': document.querySelector('[name=csrf_token]').value
+        },
+        body: JSON.stringify({
+          location: location,
+          date: date
+        })
+      });
+      
+      const data = await response.json();
+      
+      if (data.success) {
+        formState.bookedTimeslots = data.booked_timeslots;
+        return data.booked_timeslots;
+      } else {
+        console.error('Availability check failed:', data.error);
+        showAlert('error', 'Failed to check timeslot availability. Please refresh and try again.');
+        return [];
+      }
+    } catch (error) {
+      console.error('Network error checking availability:', error);
+      showAlert('error', 'Network error. Please check your connection and try again.');
+      return [];
+    } finally {
+      elements.loadingSlots.classList.add('d-none');
+    }
+  }
+
+  // ===== VALIDATION AGAINST TAMPERING =====
+  function validateCurrentSelections() {
+    // Check if selected timeslot is in the booked list
+    if (formState.selectedTime && formState.bookedTimeslots.includes(formState.selectedTime)) {
+      // Reset the selection if it's been tampered with
+      formState.timeSelected = false;
+      formState.selectedTime = null;
+      
+      // Remove any visual selection
+      document.querySelectorAll('.time-slot').forEach(slot => {
+        slot.classList.remove('btn-primary');
+        slot.classList.add('btn-outline-dark');
+      });
+      
+      showAlert('error', 'The selected timeslot is no longer available. Please select a different time.');
+      updateHiddenFields();
+      updateProgress();
+      return false;
+    }
+    return true;
+  }
+
+  // ===== DOM ELEMENTS =====
+  const elements = {
+    // Sections
+    sections: {
+      location: document.getElementById("locationSection"),
+      datetime: document.getElementById("datetimeSection"),
+      details: document.getElementById("detailsSection"),
+      organiser: document.getElementById("organiserSection"),
+      confirmation: document.getElementById("confirmationSection")
+    },
+    
+    // Tabs
+    tabs: {
+      location: document.querySelector('[data-tab="location"]'),
+      datetime: document.querySelector('[data-tab="datetime"]'),
+      details: document.querySelector('[data-tab="details"]'),
+      organiser: document.querySelector('[data-tab="organiser"]'),
+      confirmation: document.querySelector('[data-tab="confirmation"]')
+    },
+    
+    // Progress elements
+    stepCircles: [...Array(5).keys()].map(i => document.getElementById(`stepCircle${i}`)),
+    progressFill: document.getElementById("progressFill"),
+    
+    // Buttons and inputs
+    selectButtons: document.querySelectorAll(".select-btn"),
+    cards: document.querySelectorAll(".custom-card"),
+    continueBtn: document.getElementById("continueBtn"),
+    datetimeContinueBtn: document.getElementById("datetimeContinueBtn"),
+    detailsContinueBtn: document.getElementById("detailsContinueBtn"),
+    organiserContinueBtn: document.getElementById("organiserContinueBtn"),
+    finalConfirmBtn: document.getElementById("finalConfirmBtn"),
+    
+    // Form inputs
+    eventTitle: document.getElementById("eventTitle"),
+    interestGroup: document.getElementById("interestGroup"),
+    attendees: document.getElementById("attendees"),
+    activityType: document.getElementById("activityType"),
+    organiserName: document.getElementById("organiserName"),
+    organiserEmail: document.getElementById("organiserEmail"),
+    organiserPhone: document.getElementById("organiserPhone"),
+    accessibilityRadios: document.querySelectorAll('input[name="accessibilityHelp"]'),
+    
+    // Hidden form fields
+    selectedLocationField: document.getElementById("selectedLocation"),
+    selectedDateField: document.getElementById("selectedDate"),
+    selectedTimeField: document.getElementById("selectedTime"),
+    
+    // Calendar
+    calendarBody: document.getElementById("calendar-body"),
+    monthYear: document.getElementById("monthYear"),
+    prevMonth: document.getElementById("prevMonth"),
+    nextMonth: document.getElementById("nextMonth"),
+    
+    // Loading and other elements
+    loadingSlots: document.getElementById("loadingSlots") || { classList: { add: () => {}, remove: () => {} } },
+    errorMsg: document.getElementById("errorMsg"),
+    alertContainer: document.getElementById("customAlertContainer")
+  };
+
+  // ===== PROGRESS BAR MANAGEMENT =====
+  function updateProgress() {
+    const { currentStep, locationSelected, dateSelected, timeSelected, filledFields, organiserFilled } = formState;
+    
+    let progressWidth = "0%";
+    
+    switch (currentStep) {
+      case 0:
+        progressWidth = locationSelected ? "20%" : "0%";
+        break;
+      case 1:
+        if (dateSelected && timeSelected) progressWidth = "45%";
+        else if (dateSelected || timeSelected) progressWidth = "35%";
+        else progressWidth = "25%";
+        break;
+      case 2:
+        const detailsCount = Object.values(filledFields).filter(Boolean).length;
+        progressWidth = `${50 + detailsCount * 5}%`;
+        break;
+      case 3:
+        const organiserCount = Object.values(organiserFilled).filter(Boolean).length;
+        progressWidth = `${75 + organiserCount * 5}%`;
+        break;
+      case 4:
+        progressWidth = "100%";
+        break;
+    }
+    
+    elements.progressFill.style.width = progressWidth;
+    
+    // Update step circles
+    elements.stepCircles.forEach((circle, index) => {
+      circle.classList.toggle("active", index <= currentStep);
+    });
+  }
+
+  // ===== SECTION MANAGEMENT =====
+  function showSection(step) {
+    // Hide all sections
+    Object.values(elements.sections).forEach(section => section.classList.add("d-none"));
+    
+    // Show current section
+    const sectionKeys = ['location', 'datetime', 'details', 'organiser', 'confirmation'];
+    if (sectionKeys[step]) {
+      elements.sections[sectionKeys[step]].classList.remove("d-none");
+    }
+    
+    formState.currentStep = step;
+    updateProgress();
+  }
+
+  function updateTabs(activeTab) {
+    Object.values(elements.tabs).forEach(tab => tab.classList.remove("active-tab"));
+    activeTab.classList.add("active-tab");
+    
+    if (activeTab !== elements.tabs.confirmation) {
+      elements.sections.confirmation.classList.add("d-none");
+    }
+  }
+
+  // ===== UTILITY FUNCTIONS =====
+  function showAlert(type, message) {
+    const alert = document.createElement("div");
+    const alertClass = `alert-${type === "error" ? "error" : type}`;
+    
+    alert.className = `custom-alert ${alertClass}`;
+    alert.innerHTML = `
+      <span>${message}</span>
+      <button class="close-btn" onclick="this.parentElement.remove()">×</button>
+    `;
+    
+    elements.alertContainer.appendChild(alert);
+    setTimeout(() => alert.remove(), 5000);
+  }
+
+  function updateHiddenFields() {
+    elements.selectedLocationField.value = formState.selectedLocation || '';
+    elements.selectedDateField.value = formState.selectedDate || '';
+    elements.selectedTimeField.value = formState.selectedTime || '';
+  }
+
+  // ===== TIME SLOTS DATA =====
+  const timeSlots = {
+    "Indoor Sports Hall": [
+      { label: "8:00 AM – 10:00 AM", period: "morning" },
+      { label: "10:30 AM – 12:30 PM", period: "morning" },
+      { label: "1:00 PM – 3:00 PM", period: "afternoon" },
+      { label: "3:30 PM – 5:30 PM", period: "afternoon" },
+      { label: "6:00 PM – 8:00 PM", period: "evening" },
+      { label: "8:30 PM – 10:30 PM", period: "evening" }
+    ],
+    "Function Room": [
+      { label: "8:00 AM – 9:00 AM", period: "morning" },
+      { label: "9:30 AM – 10:30 AM", period: "morning" },
+      { label: "11:00 AM – 12:00 PM", period: "morning" },
+      { label: "12:30 PM – 1:30 PM", period: "afternoon" },
+      { label: "2:00 PM – 3:00 PM", period: "afternoon" },
+      { label: "3:30 PM – 4:30 PM", period: "afternoon" },
+      { label: "5:00 PM – 6:00 PM", period: "evening" },
+      { label: "6:30 PM – 7:30 PM", period: "evening" },
+      { label: "8:00 PM – 9:00 PM", period: "evening" }
+    ],
+    "Multi-purpose Hall": [
+      { label: "8:00 AM – 9:30 AM", period: "morning" },
+      { label: "9:45 AM – 11:15 AM", period: "morning" },
+      { label: "11:30 AM – 1:00 PM", period: "morning" },
+      { label: "1:15 PM – 2:45 PM", period: "afternoon" },
+      { label: "3:00 PM – 4:30 PM", period: "afternoon" },
+      { label: "4:45 PM – 6:15 PM", period: "afternoon" },
+      { label: "6:30 PM – 8:00 PM", period: "evening" },
+      { label: "8:15 PM – 9:45 PM", period: "evening" }
+    ]
+  };
+
+  // ===== LOCATION SELECTION =====
+  function handleLocationSelect(btn) {
+    const location = btn.getAttribute("data-location");
+    
+    // Reset all location buttons
+    elements.selectButtons.forEach(button => {
+      button.classList.remove("btn-primary");
+      button.classList.add("btn-outline-primary");
+      button.textContent = "Select";
+    });
+    
+    // Style selected button
+    btn.classList.remove("btn-outline-primary");
+    btn.classList.add("btn-primary");
+    btn.textContent = "Selected";
+    
+    // Handle location change
+    if (formState.selectedLocation !== location) {
+      formState.selectedLocation = location;
+      
+      // Reset date & time if location changed
+      if (formState.hasSelectedLocationBefore) {
+        resetDateTimeSelection();
+        showAlert("info", "Location changed. Please reselect your date and time.");
+      }
+      
+      populateTimeSlots(location);
+      renderCalendar(formState.calendarDate);
+      formState.hasSelectedLocationBefore = true;
+    }
+    
+    formState.locationSelected = true;
+    elements.errorMsg.classList.add("d-none");
+    updateHiddenFields();
+    updateProgress();
+  }
+
+  function resetDateTimeSelection() {
+    if (formState.selectedCalendarTd) {
+      formState.selectedCalendarTd.classList.remove("bg-primary", "text-white");
+      formState.selectedCalendarTd = null;
+    }
+    
+    formState.dateSelected = false;
+    formState.timeSelected = false;
+    formState.selectedDate = null;
+    formState.selectedTime = null;
+    
+    document.querySelectorAll(".time-slot").forEach(slot => slot.classList.remove("btn-primary"));
+    ["morningSlotButtons", "afternoonSlotButtons", "eveningSlotButtons"].forEach(id => {
+      document.getElementById(id).innerHTML = "";
+    });
+    ["morningSlots", "afternoonSlots", "eveningSlots"].forEach(id => {
+      document.getElementById(id).classList.add("d-none");
+    });
+  }
+
+  // ===== TIME SLOTS =====
+  async function populateTimeSlots(location) {
+    const slots = timeSlots[location];
+    const sections = {
+      morning: document.getElementById("morningSlotButtons"),
+      afternoon: document.getElementById("afternoonSlotButtons"),
+      evening: document.getElementById("eveningSlotButtons")
+    };
+
+    // Reset sections
+    Object.keys(sections).forEach(period => {
+      sections[period].innerHTML = "";
+      document.getElementById(period + "Slots").classList.add("d-none");
+    });
+
+    // Get booked timeslots for the selected date if available
+    let bookedSlots = [];
+    if (formState.selectedDate) {
+      bookedSlots = await checkTimeslotAvailability(location, formState.selectedDate);
+    }
+
+    function startMinutesFromLabel(label) {
+      // "9:00 AM – 10:00 AM" → 9:00 AM
+      const start = label.split('–')[0].trim(); // "9:00 AM"
+      const [time, mer] = start.split(' ');
+      let [h, m] = time.split(':').map(Number);
+      if (mer.toUpperCase() === 'PM' && h !== 12) h += 12;
+      if (mer.toUpperCase() === 'AM' && h === 12) h = 0;
+      return h * 60 + (m || 0);
+    }
+
+    // Check if selected date is today
+    const isToday = formState.selectedDate === new Date().toISOString().slice(0,10);
+    const now = new Date();
+    const nowMin = now.getHours() * 60 + now.getMinutes();
+
+    // Populate slots
+    slots.forEach(slot => {
+      const slotStartMin = startMinutesFromLabel(slot.label);
+      const isPastToday = isToday && slotStartMin <= nowMin;
+      const isBooked = bookedSlots.includes(slot.label);
+      const shouldDisable = isBooked || isPastToday;
+
+      const btn = document.createElement("button");
+      btn.className = shouldDisable ? "btn btn-secondary time-slot disabled"
+                                    : "btn btn-outline-dark time-slot";
+      btn.type = "button";
+      btn.disabled = shouldDisable;
+      
+      if (isPastToday && !isBooked) {
+        btn.textContent = `${slot.label} (Past)`;
+      } else if (isBooked) {
+        btn.textContent = `${slot.label} (Booked)`;
+      } else {
+        btn.textContent = slot.label;
+      }
+      
+      btn.setAttribute('data-timeslot', slot.label);
+      btn.setAttribute('data-available', !shouldDisable);
+      
+      if (!shouldDisable) {
+        btn.addEventListener("click", async () => {
+          // Double-check availability before selection
+          const currentBooked = await checkTimeslotAvailability(location, formState.selectedDate);
+          
+          if (currentBooked.includes(slot.label)) {
+            showAlert('error', 'This timeslot was just booked by someone else. Please select a different time.');
+            // Refresh the timeslots
+            populateTimeSlots(location);
+            return;
+          }
+          
+          // Validate that this selection is legitimate
+          if (!validateTimeslotSelection(slot.label)) {
+            return;
+          }
+          
+          document.querySelectorAll(".time-slot").forEach(b => {
+            b.classList.remove("btn-primary");
+            b.classList.add("btn-outline-dark");
+          });
+          btn.classList.remove("btn-outline-dark");
+          btn.classList.add("btn-primary");
+          formState.timeSelected = true;
+          formState.selectedTime = slot.label;
+          updateHiddenFields();
+          updateProgress();
+        });
+      }
+      
+      sections[slot.period].appendChild(btn);
+      document.getElementById(slot.period + "Slots").classList.remove("d-none");
+    });
+  }
+
+  // ===== TIMESLOT VALIDATION =====
+  function validateTimeslotSelection(selectedTime) {
+    // Check if the timeslot exists in our valid timeslots for the location
+    const validSlots = timeSlots[formState.selectedLocation];
+    if (!validSlots || !validSlots.some(slot => slot.label === selectedTime)) {
+      showAlert('error', 'Invalid timeslot selection.');
+      return false;
+    }
+    
+    // Check if it's not in the booked list
+    if (formState.bookedTimeslots.includes(selectedTime)) {
+      showAlert('error', 'This timeslot is no longer available.');
+      return false;
+    }
+    
+    return true;
+  }
+
+  // ===== CALENDAR =====
+  function renderCalendar(date) {
+    const year = date.getFullYear();
+    const month = date.getMonth();
+    const firstDay = new Date(year, month, 1).getDay();
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    elements.monthYear.textContent = date.toLocaleString("default", {
+      month: "long",
+      year: "numeric"
+    });
+
+    const isCurrentMonth = year === today.getFullYear() && month === today.getMonth();
+    elements.prevMonth.style.visibility = isCurrentMonth ? "hidden" : "visible";
+
+    let html = "", day = 1;
+    for (let i = 0; i < 6; i++) {
+      html += "<tr>";
+      for (let j = 0; j < 7; j++) {
+        if (i === 0 && j < firstDay) {
+          html += "<td></td>";
+        } else if (day > daysInMonth) {
+          html += "<td></td>";
+        } else {
+          const thisDate = new Date(year, month, day);
+          thisDate.setHours(0, 0, 0, 0);
+          const isPast = thisDate < today;
+          const className = isPast ? "text-muted disabled-date" : "calendar-day";
+          const paddedMonth = String(month + 1).padStart(2, '0');
+          const paddedDay = String(day).padStart(2, '0');
+          const fullDateStr = `${year}-${paddedMonth}-${paddedDay}`;
+
+          html += `<td class="${className}" data-date="${fullDateStr}">${day}</td>`;
+          day++;
+        }
+      }
+      html += "</tr>";
+    }
+
+    elements.calendarBody.innerHTML = html;
+
+    // Add click handlers for calendar days
+    document.querySelectorAll(".calendar-day").forEach(cell => {
+      cell.addEventListener("click", async () => {
+        if (formState.selectedCalendarTd) {
+          formState.selectedCalendarTd.classList.remove("bg-primary", "text-white");
+        }
+        cell.classList.add("bg-primary", "text-white");
+        formState.selectedCalendarTd = cell;
+        formState.dateSelected = true;
+        formState.selectedDate = cell.getAttribute("data-date");
+        
+        // Reset time selection when date changes
+        formState.timeSelected = false;
+        formState.selectedTime = null;
+        
+        updateHiddenFields();
+        updateProgress();
+        
+        // Refresh timeslots for the new date
+        if (formState.selectedLocation) {
+          await populateTimeSlots(formState.selectedLocation);
+        }
+      });
+    });
+  }
+
+  // ===== FORM VALIDATION =====
+  function validateEventDetails() {
+    const title = elements.eventTitle.value.trim();
+    const group = elements.interestGroup.value;
+    const attendees = elements.attendees.value.trim();
+    const activity = elements.activityType.value;
+    const equipment = document.getElementById("equipment").value.trim();
+    const description = document.getElementById("description").value.trim();
+
+    const titleRegex = /^[a-zA-Z0-9\s\.,'-]{3,50}$/;
+    const numberRegex = /^[1-9][0-9]*$/;
+    const safeTextRegex = /^[^<>]*$/;
+
+    let errors = [];
+    if (!titleRegex.test(title)) errors.push("Event title is missing or invalid.");
+    if (!group || group === "") errors.push("Please select an interest group.");
+    if (!numberRegex.test(attendees)) errors.push("Please enter a valid number of attendees.");
+    if (!activity || activity === "") errors.push("Please select an activity type.");
+    if (!safeTextRegex.test(equipment)) errors.push("Equipment field contains invalid characters.");
+    if (!safeTextRegex.test(description)) errors.push("Description field contains invalid characters.");
+
+    return errors;
+  }
+
+  function validateOrganiserDetails() {
+    const name = elements.organiserName.value.trim();
+    const email = elements.organiserEmail.value.trim();
+    const phone = elements.organiserPhone.value.trim();
+    const helpSelected = formState.organiserFilled.help;
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    const phoneRegex = /^[89]\d{7}$/;
+
+    let errors = [];
+    if (!name) errors.push("Please enter your name.");
+    if (!emailRegex.test(email)) errors.push("Please enter a valid email address.");
+    if (!phoneRegex.test(phone)) errors.push("Phone number must start with 8 or 9 and be 8 digits.");
+    if (!helpSelected) errors.push("Please select an accessibility assistance option.");
+
+    return errors;
+  }
+
+  // ===== CONFIRMATION SUMMARY =====
+  function populateConfirmationSummary() {
+    const equipment = document.getElementById("equipment").value.trim();
+    const description = document.getElementById("description").value.trim();
+
+    document.getElementById("confirmationLocation").textContent = formState.selectedLocation || "-";
+
+    if (formState.selectedDate) {
+      const formatted = new Date(formState.selectedDate).toLocaleDateString("en-GB", {
+        day: "numeric",
+        month: "long",
+        year: "numeric",
+      });
+      document.getElementById("confirmationDate").textContent = formatted;
+    } else {
+      document.getElementById("confirmationDate").textContent = "-";
+    }
+
+    document.getElementById("confirmationTime").textContent = formState.selectedTime || "-";
+    document.getElementById("confirmationTitle").textContent = elements.eventTitle.value.trim();
+    document.getElementById("confirmationGroup").textContent = elements.interestGroup.value;
+    document.getElementById("confirmationActivity").textContent = elements.activityType.value;
+    document.getElementById("confirmationAttendees").textContent = elements.attendees.value.trim();
+    document.getElementById("confirmationEquipment").textContent = equipment || "No value entered";
+    document.getElementById("confirmationDescription").textContent = description || "No value entered";
+
+    document.getElementById("confirmationOrgName").textContent = elements.organiserName.value.trim();
+    document.getElementById("confirmationOrgEmail").textContent = elements.organiserEmail.value.trim();
+    document.getElementById("confirmationOrgPhone").textContent = elements.organiserPhone.value.trim();
+    
+    const helpValue = document.querySelector('input[name="accessibilityHelp"]:checked')?.value || "No";
+    document.getElementById("confirmationHelp").textContent = helpValue;
+
+    // Set image based on location
+    const locationImages = {
+      "Indoor Sports Hall": "/static/images/sports_hall.jpg",
+      "Function Room": "/static/images/function_room.jpg",
+      "Multi-purpose Hall": "/static/images/multipurpose.jpg"
+    };
+    
+    const imageSrc = locationImages[formState.selectedLocation] || "/static/images/booking.jpg";
+    document.getElementById("confirmationImage").src = imageSrc;
+  }
+
+  // ===== EVENT HANDLERS =====
+  
+  // Location selection
+  elements.selectButtons.forEach(btn => {
+    btn.addEventListener("click", () => handleLocationSelect(btn));
+  });
+
+  // Continue buttons
+  elements.continueBtn.addEventListener("click", () => {
+    if (!formState.locationSelected) {
+      showAlert("info", "Please select a location before continuing.");
+      return;
+    }
+    showSection(1);
+    updateTabs(elements.tabs.datetime);
+  });
+
+  elements.datetimeContinueBtn.addEventListener("click", () => {
+    if (!formState.dateSelected || !formState.timeSelected) {
+      showAlert("info", "Please select both a date and time slot.");
+      return;
+    }
+    showSection(2);
+    updateTabs(elements.tabs.details);
+  });
+
+  elements.detailsContinueBtn.addEventListener("click", () => {
+    const errors = validateEventDetails();
+    if (errors.length > 0) {
+      showAlert("error", errors.join(" "));
+      return;
+    }
+    showSection(3);
+    updateTabs(elements.tabs.organiser);
+  });
+
+  elements.organiserContinueBtn.addEventListener("click", () => {
+    const errors = validateOrganiserDetails();
+    if (errors.length > 0) {
+      showAlert("error", errors.join(" "));
+      return;
+    }
+    showSection(4);
+    updateTabs(elements.tabs.confirmation);
+    populateConfirmationSummary();
+  });
+
+  // Tab navigation
+  elements.tabs.location.addEventListener("click", () => {
+    showSection(0);
+    updateTabs(elements.tabs.location);
+  });
+
+  elements.tabs.datetime.addEventListener("click", () => {
+    if (!formState.locationSelected) return;
+    showSection(1);
+    updateTabs(elements.tabs.datetime);
+  });
+
+  elements.tabs.details.addEventListener("click", () => {
+    if (!formState.dateSelected || !formState.timeSelected) return;
+    showSection(2);
+    updateTabs(elements.tabs.details);
+  });
+
+  elements.tabs.organiser.addEventListener("click", () => {
+    const errors = validateEventDetails();
+    if (errors.length > 0) return;
+    showSection(3);
+    updateTabs(elements.tabs.organiser);
+  });
+
+  elements.tabs.confirmation.addEventListener("click", () => {
+    const detailsErrors = validateEventDetails();
+    const organiserErrors = validateOrganiserDetails();
+    
+    if (detailsErrors.length > 0 || organiserErrors.length > 0 || 
+        !formState.locationSelected || !formState.dateSelected || !formState.timeSelected) {
+      showAlert("info", "Please complete all previous sections before proceeding to confirmation.");
+      return;
+    }
+    
+    showSection(4);
+    updateTabs(elements.tabs.confirmation);
+    populateConfirmationSummary();
+  });
+
+  // Form input progress tracking
+  elements.eventTitle.addEventListener("blur", () => {
+    formState.filledFields.title = elements.eventTitle.value.trim().length > 0;
+    updateProgress();
+  });
+
+  elements.interestGroup.addEventListener("change", () => {
+    formState.filledFields.group = elements.interestGroup.value !== "";
+    updateProgress();
+  });
+
+  elements.attendees.addEventListener("blur", () => {
+    formState.filledFields.attendees = /^[1-9][0-9]*$/.test(elements.attendees.value.trim());
+    updateProgress();
+  });
+
+  elements.activityType.addEventListener("change", () => {
+    formState.filledFields.activity = elements.activityType.value !== "";
+    updateProgress();
+  });
+
+  elements.organiserName.addEventListener("blur", () => {
+    formState.organiserFilled.name = elements.organiserName.value.trim().length > 0;
+    updateProgress();
+  });
+
+  elements.organiserEmail.addEventListener("blur", () => {
+    const email = elements.organiserEmail.value.trim();
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    formState.organiserFilled.email = emailRegex.test(email);
+    updateProgress();
+  });
+
+  elements.organiserPhone.addEventListener("blur", () => {
+    const phone = elements.organiserPhone.value.trim();
+    formState.organiserFilled.phone = /^[89]\d{7}$/.test(phone);
+    updateProgress();
+  });
+
+  elements.accessibilityRadios.forEach(radio => {
+    radio.addEventListener("change", () => {
+      formState.organiserFilled.help = true;
+      updateProgress();
+    });
+  });
+
+  // Calendar navigation
+  elements.prevMonth.addEventListener("click", () => {
+    const tempDate = new Date(formState.calendarDate);
+    tempDate.setMonth(formState.calendarDate.getMonth() - 1);
+    const today = new Date();
+    if (tempDate < today) return;
+    formState.calendarDate.setMonth(formState.calendarDate.getMonth() - 1);
+    renderCalendar(formState.calendarDate);
+  });
+
+  elements.nextMonth.addEventListener("click", () => {
+    formState.calendarDate.setMonth(formState.calendarDate.getMonth() + 1);
+    renderCalendar(formState.calendarDate);
+  });
+
+  // Form submission handler with security checks
+  document.getElementById("bookingForm").addEventListener("submit", function(e) {
+    e.preventDefault();
+    
+    // Prevent double submission
+    if (formState.isSubmitting) {
+      showAlert('info', 'Booking is being processed. Please wait...');
+      return;
+    }
+    
+    // Final validation
+    const detailsErrors = validateEventDetails();
+    const organiserErrors = validateOrganiserDetails();
+    
+    if (detailsErrors.length > 0 || organiserErrors.length > 0 || 
+        !formState.locationSelected || !formState.dateSelected || !formState.timeSelected) {
+      showAlert("error", "Please complete all required fields before submitting.");
+      return;
+    }
+    
+    // Validate that the selected timeslot is still valid
+    if (!validateTimeslotSelection(formState.selectedTime)) {
+      showAlert('error', 'Please reselect your timeslot as it may no longer be available.');
+      return;
+    }
+    
+    // Validate hidden fields match form state (anti-tampering)
+    if (elements.selectedLocationField.value !== formState.selectedLocation ||
+        elements.selectedDateField.value !== formState.selectedDate ||
+        elements.selectedTimeField.value !== formState.selectedTime) {
+      showAlert('error', 'Form data inconsistency detected. Please refresh and try again.');
+      return;
+    }
+    
+    // Set submitting flag
+    formState.isSubmitting = true;
+    elements.finalConfirmBtn.disabled = true;
+    elements.finalConfirmBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Processing...';
+    
+    // Update hidden fields one final time
+    updateHiddenFields();
+    
+    // Submit the form
+    this.submit();
+  });
+
+  // ===== INITIALIZATION =====
+  elements.stepCircles[0].classList.add("active");
+  updateProgress();
+  renderCalendar(formState.calendarDate);
+  secureFormState(); // Initialize security measures
+});
+</script>
+
 {% endblock %}

@@ -1,0 +1,161 @@
+{% extends "base.html" %}
+{% block content %}
+<!-- Banner -->
+<div class="banner-wrapper">
+  <img src="{{ url_for('static', filename='images/booking.jpg') }}" alt="Banner" class="banner-image">
+</div>
+
+<div class="container my-5">
+  <div class="booking-confirmed-container">
+    <!-- Success Alert -->
+    <div class="custom-alert alert-success mb-4 text-center">
+      ✅ Your booking has been successfully confirmed!
+    </div>
+
+    <!-- Booking Reference -->
+    <div class="text-center mb-4">
+      <h3 class="fw-semibold">Booking Reference: <span class="text-primary">{{ booking_reference }}</span></h3>
+      <p class="text-muted">Please save this reference number for your records</p>
+    </div>
+
+    <!-- Booking Details -->
+    <div class="row g-4 align-items-center">
+      <!-- Left: Location Image -->
+      <div class="col-md-6 text-center">
+        {% set location_images = {
+          'Indoor Sports Hall': 'images/sports_hall.jpg',
+          'Function Room': 'images/function_room.jpg',
+          'Multi-purpose Hall': 'images/multipurpose.jpg'
+        } %}
+        <img src="{{ url_for('static', filename=location_images.get(booking.location, 'images/booking.jpg')) }}" 
+             alt="{{ booking.location }}" 
+             class="img-fluid rounded shadow-lg" 
+             style="max-height: 400px; object-fit: cover; width: 100%;">
+      </div>
+
+      <!-- Right: Booking Summary -->
+        <div class="col-md-6">
+            <div class="p-4 bg-white rounded shadow-sm">
+            <!-- Event Title -->
+            <p>
+                <span class="h4">Event: {{ booking.event_title }}</span>
+            </p>
+            <!-- Location -->
+            <h3 class="mb-4 fw-semibold">{{ booking.location }}</h3><br>
+            <!-- Date -->
+            <p>
+                <span class="h5">{{ booking.date.strftime('%d %B %Y') }}</span>
+            </p>
+            <!-- Time -->
+            <p>
+                <span class="h5">{{ booking.time }}</span>
+            </p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Next Steps -->
+    <div class="row mt-5">
+      <div class="col-12">
+        <div class="card p-4 bg-dark text-white rounded-4">
+          <h4 class="mb-3">What's Next?</h4>
+          <ul class="mb-0">
+            <li class="mb-2">You will receive a confirmation email at <strong>{{ booking.organiser_email }}</strong> shortly</li>
+            <li class="mb-2">Our team will contact you if any additional setup or equipment arrangements are needed</li>
+            <li class="mb-2">Please arrive 15 minutes before your scheduled time for setup</li>
+            <li>If you need to make changes, please submit them at least 24 hours in advance</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <!-- Action Buttons -->
+    <div class="text-center mt-5">
+      <a href="{{ url_for('home') }}" class="btn btn-custom-continue rounded-pill px-5 py-2 fs-5 me-3">Return to Home</a>
+      <a href="{{ url_for('booking.booking_manage') }}" class="btn btn-custom-continue rounded-pill px-5 py-2 fs-5 me-3">Manage Bookings</a>
+    </div>
+
+    <!-- Print Option -->
+    <div class="text-center mt-3">
+      <button onclick="window.print()" class="btn btn-outline-secondary btn-sm rounded-2">
+        🖨️ Print Booking Details
+      </button>
+    </div>
+  </div>
+</div>
+
+<script>
+// Prevent refresh-based duplicate submissions
+document.addEventListener('DOMContentLoaded', function() {
+  // Replace the current history entry to prevent back button issues
+  if (window.history.replaceState) {
+    window.history.replaceState(null, null, window.location.href);
+  }
+  
+  // Prevent refresh from resubmitting
+  window.addEventListener('beforeunload', function(e) {
+    // Clear any form data that might cause resubmission
+    if (window.sessionStorage) {
+      sessionStorage.removeItem('bookingFormData');
+    }
+  });
+  
+  // Warn users about navigating away
+  let hasInteracted = false;
+  document.addEventListener('click', function() {
+    hasInteracted = true;
+  });
+  
+  window.addEventListener('beforeunload', function(e) {
+    if (!hasInteracted) {
+      // Only show warning if they haven't clicked any buttons
+      e.preventDefault();
+      e.returnValue = 'Are you sure you want to leave this page?';
+      return e.returnValue;
+    }
+  });
+  
+  // Clear any browser form data
+  if ('serviceWorker' in navigator) {
+    // Clear any cached form data
+    caches.keys().then(function(names) {
+      for (let name of names) {
+        if (name.includes('booking-form')) {
+          caches.delete(name);
+        }
+      }
+    });
+  }
+});
+
+// Disable browser back/forward cache for this page
+window.addEventListener('pageshow', function(event) {
+  if (event.persisted) {
+    // Page was loaded from cache, reload it
+    window.location.reload();
+  }
+});
+</script>
+
+<style>
+@media print {
+  .banner-wrapper,
+  .btn,
+  .navbar,
+  .footer {
+    display: none !important;
+  }
+  
+  .booking-confirmed-container {
+    margin-top: 0 !important;
+  }
+  
+  .custom-alert {
+    border: 1px solid #28a745 !important;
+    background-color: #d4edda !important;
+    color: #155724 !important;
+  }
+}
+
+</style>
+{% endblock %}

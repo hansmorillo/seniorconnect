@@ -1,5 +1,4 @@
-from flask import Flask, render_template, request  
-from flask_login import current_user  
+from flask import Flask, render_template, request
 from dotenv import load_dotenv
 from datetime import timedelta
 import os
@@ -10,7 +9,9 @@ from routes.event_routes import event
 from routes.user_routes import user
 from routes.booking_routes import booking
 from models.user import User
+from models.booking import Booking
 from config import SQLALCHEMY_DATABASE_URI, SQLALCHEMY_TRACK_MODIFICATIONS
+from datetime import datetime
 
 # ---------- Load Environment Variables ----------
 load_dotenv()
@@ -20,6 +21,7 @@ def create_app(test_config=None):
     
     
     app.secret_key = os.getenv('SECRET_KEY', 'fallback_secret')
+    app.config['MAX_CONTENT_LENGTH'] = 1 * 1024 * 1024  # 1 MB
 
     # Database Setup
     app.config['SQLALCHEMY_DATABASE_URI'] = SQLALCHEMY_DATABASE_URI
@@ -29,6 +31,8 @@ def create_app(test_config=None):
     db.init_app(app)
     bcrypt.init_app(app)
     login_manager.init_app(app)
+    csrf.init_app(app)
+    limiter.init_app(app)
     login_manager.login_view = 'auth.login'
 
     # CSRF

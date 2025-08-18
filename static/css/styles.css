@@ -1,0 +1,506 @@
+body, html {
+  margin: 0;
+  padding: 0;
+  overflow-x: hidden;
+}
+
+/* === BOOKING PAGE === */
+.banner-wrapper {
+  width: 100%;
+  padding: 0;
+  margin: 0;
+  overflow: hidden;
+}
+
+.banner-image {
+  width: 100%;
+  height: 500px;
+  object-fit: cover;
+  display: block;
+}
+
+.form-overlay-wrapper {
+  position: relative;
+  top: -100px;
+  display: flex;
+  justify-content: center;
+  margin-bottom: -100px;
+}
+
+.booking-form-wrapper {
+  background-color: #fff;
+  border-radius: 20px 20px 0 0;
+  padding: 3rem 2rem 3rem; /* more bottom padding */
+  margin: 0;
+  width: 100%;
+  max-width: 1100px;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+  overflow: hidden;
+  min-height: 80vh; /* extend beyond viewport */
+}
+
+/* === TABS === */
+.tab-container {
+  margin: 0;
+  padding: 0;
+  border-radius: 16px 16px 0 0;
+  overflow: hidden;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+  background-color: #ffffff;
+}
+
+.tab-container .row {
+  margin: 0;
+}
+
+.tab-box {
+  display: block;
+  width: 100%;
+  text-align: center;
+  padding: 24px 0; 
+  font-weight: 500;
+  font-size: 20px; 
+  color: #000;
+  text-decoration: none;
+  border: none;
+  background-color: #fff;
+  transition: background-color 0.2s ease;
+  cursor: pointer;
+}
+
+.tab-box:last-child {
+  border-right: none;
+}
+
+.tab-box:hover {
+  background-color: #f7f9fc;
+}
+
+.active-tab {
+  background-color: #f1f8ff;
+  font-weight: 600;
+}
+
+/* === Progress bar === */
+.progress-steps-container {
+  position: relative;
+}
+
+.step-circle {
+  width: 24px;
+  height: 24px;
+  background-color: white;
+  border: 3px solid #e0e0e0;
+  border-radius: 50%;
+  z-index: 2;
+}
+
+.step-circle.active {
+  border-color: #0d6efd;
+  background-color: #0d6efd;
+}
+
+/* === CARDS === */
+.custom-card {
+  background-color: #f8f9fa;
+  border-radius: 1rem;
+  padding: 1.5rem 1rem;
+  transition: 0.3s ease;
+}
+
+.custom-card:hover {
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.15);
+}
+
+.custom-card.selected {
+  border: 2px solid #0d6efd;
+  background-color: #e9f3ff;
+}
+
+.custom-card img {
+  margin-bottom: 1.5rem;
+}
+
+.custom-card h5 {
+  margin-bottom: 1.2rem;
+  font-size: 1.25rem;
+}
+
+.custom-card .btn-outline-dark {
+  margin-bottom: 1rem;
+}
+
+.custom-card p {
+  margin-bottom: 1rem;
+  font-size: 1.1rem;
+}
+
+.custom-card .btn-outline-primary,
+.custom-card .btn-primary {
+  margin-top: 1rem;
+}
+
+/* === LOCATION BUTTONS === */
+.btn-outline-dark.btn-sm {
+  border-radius: 50px;
+  font-size: 1rem;
+  padding: 6px 16px;
+}
+
+.btn-outline-primary.btn-sm,
+.btn-primary.btn-sm {
+  font-size: 1rem;
+  padding: 10px 0;
+  border-radius: 25px;
+  width: 80%;
+  display: block;
+  margin: 0 auto;
+}
+
+.btn-outline-primary.btn-sm {
+  color: #186FAF;
+  border: 2px solid #186FAF;
+  background-color: white;
+}
+
+.btn-outline-primary.btn-sm:hover {
+  background-color: #e6f0fa; /* light blue background on hover */
+  color: #186FAF;
+  border-color: #186FAF;
+}
+
+.btn-primary.btn-sm {
+  background-color: #186FAF;
+  border-color: #186FAF;
+  color: white;
+}
+
+.btn-primary.px-5.py-2 {
+  border-radius: 40px; 
+}
+
+.btn-custom-continue {
+  background-color: #186FAF;
+  border-color: #186FAF;
+  color: white;
+}
+
+.btn-custom-continue:hover {
+  background-color: #145c94; /* slightly darker for hover effect */
+  border-color: #145c94;
+}
+
+/* === MODAL FOR LOCATION INFO === */
+.modal-content {
+  max-width: 700px;
+  margin: auto;
+  padding: 2rem;
+  border-radius: 16px;
+}
+
+.modal-body ul {
+  padding-left: 1rem;
+  list-style-type: disc;
+}
+.modal-body li {
+  margin-bottom: 0.5rem;
+}
+.modal-body h6 {
+  margin-top: 1rem;
+}
+
+#facilitiesList {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 2rem; /* row-gap, column-gap */
+  padding-left: 1.2rem; /* ensures bullet alignment */
+  margin: 0;
+}
+
+#facilitiesList li {
+  list-style-type: disc;
+  list-style-position: outside;
+  flex: 0 0 45%; /* two columns */
+  white-space: nowrap;
+}
+
+/* Location name (modal title) */
+#locationInfoModalLabel {
+  font-size: 1.6rem; 
+}
+
+/* Section headers like "Facilities Available", "Booking Guidelines", etc. */
+#locationInfoModal h6 {
+  font-size: 1.1rem;
+  margin-top: 1.5rem; 
+}
+
+.modal {
+  z-index: 1050 !important;
+}
+
+.modal-backdrop {
+  z-index: 1040 !important;
+}
+
+/* === DATE & TIME === */
+.section-label-lg {
+  font-size: 25px;
+}
+
+/* === CALENDAR === */
+.custom-calendar-wrapper {
+  width: 100%;
+  max-width: 660px;  /* Wider calendar */
+  margin: 0 auto;
+  font-size: 1.1rem;
+  background-color: white;
+}
+
+.custom-calendar-wrapper .table {
+  table-layout: fixed;
+  width: 100%;
+}
+
+.custom-calendar-wrapper th,
+.custom-calendar-wrapper td {
+  text-align: center;
+  vertical-align: middle;
+  padding: 0.75rem;
+  font-size: 1rem;
+}
+
+.calendar-day.bg-primary {
+  border-radius: 6px;
+  background-color: #186FAF !important;
+  color: white;
+}
+
+.disabled-date {
+  pointer-events: none;
+  opacity: 0.4;
+  color: #999;
+}
+
+.calendar-day {
+  cursor: pointer;
+}
+
+.calendar-day:hover {
+  background-color: #e6f0fa;
+  border-radius: 6px;
+}
+
+/* === TIME SLOT BUTTONS === */
+.time-slot {
+  border: 2px solid #186FAF;
+  border-radius: 12px;
+  padding: 10px 20px;
+  background-color: white;
+  color: #186FAF;
+  font-weight: 400;
+  transition: all 0.2s ease;
+  cursor: pointer;
+}
+
+.time-slot:hover {
+  background-color: #e6f0fa; /* same hover as select button */
+  color: #186FAF;
+}
+
+.time-slot.btn-primary {
+  background-color: #186FAF;
+  color: white;
+  font-weight: 400;
+  border-color: #186FAF;
+}
+
+.confirmation-titles {
+  font-size: 18px;
+}
+
+/* === FORM ALERTS === */
+.custom-alert {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-radius: 8px;
+  padding: 15px 20px;
+  margin: 10px auto;
+  font-size: 1rem;
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+  animation: slideFade 0.4s ease;
+  color: #333;
+  position: relative;
+}
+
+.alert-success {
+  background-color: #d4edda;
+  border-left: 6px solid #28a745;
+}
+
+.alert-info {
+  background-color: #d1ecf1;
+  border-left: 6px solid #17a2b8;
+}
+
+.alert-warning {
+  background-color: #fff3cd;
+  border-left: 6px solid #ffc107;
+}
+
+.alert-error {
+  background-color: #f8d7da;
+  border-left: 6px solid #dc3545;
+}
+
+.custom-alert .close-btn {
+  background: none;
+  border: none;
+  font-size: 1.2rem;
+  font-weight: bold;
+  color: #333;
+  cursor: pointer;
+}
+
+@keyframes slideFade {
+  from {
+    opacity: 0;
+    transform: translateY(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.booking-confirmed-container {
+  padding: 3rem 2rem;
+}
+
+.booking-label {
+  font-size: 1.1rem;
+}
+
+/* === BOOKING MANAGEMENT PAGE STYLES === */
+
+/* Booking items for management page */
+.manage-booking-item {
+  transition: all 0.3s ease;
+  border-left: 4px solid transparent;
+}
+
+.manage-booking-item:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.1) !important;
+  border-left-color: #0d6efd;
+}
+
+/* Location icons for management page */
+.manage-icon-circle {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Editable fields for management page */
+.manage-editable-field {
+  position: relative;
+}
+
+.manage-field-display {
+  min-height: 38px;
+  padding: 6px 12px;
+  background-color: #f8f9fa;
+  border: 1px solid #dee2e6;
+  border-radius: 0.375rem;
+}
+
+.manage-field-value {
+  flex-grow: 1;
+}
+
+/* Calendar wrapper for edit modal */
+.manage-calendar-wrapper {
+  width: 100%;
+  max-width: 660px;   /* was 300px */
+}
+
+.manage-calendar-day {
+  cursor: pointer;
+  padding: 8px;
+  border-radius: 4px;
+  transition: all 0.2s ease;
+}
+
+.manage-calendar-day:hover {
+  background-color: #e9ecef;
+}
+
+.manage-disabled-date {
+  color: #6c757d !important;
+  cursor: not-allowed;
+}
+
+/* Time slot buttons for management page */
+.manage-time-slot {
+  min-width: 140px;
+  font-size: 0.9rem;
+  border: 2px solid #186FAF;
+  border-radius: 12px;
+  padding: 10px 20px;
+  background-color: white;
+  color: #186FAF;
+  font-weight: 400;
+  transition: all 0.2s ease;
+  cursor: pointer;
+}
+
+.manage-time-slot:hover {
+  background-color: #e6f0fa;
+  color: #186FAF;
+}
+
+.manage-time-slot.btn-primary {
+  background-color: #186FAF;
+  color: white;
+  font-weight: 400;
+  border-color: #186FAF;
+}
+
+.manage-time-slot:disabled {
+  background-color: #6c757d;
+  border-color: #6c757d;
+  color: white;
+}
+
+/* Loading state for edit modal */
+#editLoadingSlots {
+  color: #6c757d;
+}
+
+/* Changes confirmation styling */
+.manage-changes-item {
+  padding: 8px 12px;
+  background-color: #fff3cd;
+  border-left: 4px solid #ffc107;
+  margin-bottom: 8px;
+  border-radius: 0.375rem;
+}
+
+/* Remove card border in booking management */
+.manage-booking-item.card {
+  border: none !important;
+  border-radius: 12px; /* still keep soft rounded corners */
+  box-shadow: 0 4px 12px rgba(0,0,0,0.08); /* subtle shadow instead of border */
+}
+
+/* Uniform button styles */
+.manage-booking-actions .btn {
+  border-radius: 20px; /* rounded rectangle */
+  font-size: 0.95rem;
+  padding: 6px 18px;
+}
