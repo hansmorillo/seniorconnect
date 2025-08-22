@@ -1,6 +1,7 @@
-from flask_wtf import FlaskForm
+from flask_wtf import FlaskForm, RecaptchaField
 from wtforms import StringField, PasswordField, BooleanField, SubmitField
-from wtforms.validators import DataRequired, Email, Length, Regexp
+from wtforms.validators import DataRequired, Email, Length, Regexp, ValidationError
+from models.user import User
 
 class LoginForm(FlaskForm):
     email = StringField(
@@ -13,6 +14,7 @@ class LoginForm(FlaskForm):
         validators=[DataRequired(), Length(min=8, max=128)]
     )
     remember = BooleanField("Remember for 30 days")
+    recaptcha = RecaptchaField()  # Added reCAPTCHA field
     submit = SubmitField("Sign in")
 
 
@@ -40,7 +42,22 @@ class RegisterForm(FlaskForm):
             message="Password must include upper, lower, number, and special character"
         )
     ])      # Password Security
+    recaptcha = RecaptchaField()  # Added reCAPTCHA field
     submit = SubmitField('Register')
+
+    def validate_email(self, email):
+        """Custom validator to check if email already exists"""
+        user = User.query.filter_by(email=email.data.lower()).first()
+        if user:
+            raise ValidationError('Email already registered. Please choose a different one.')
+
+    def validate_phone(self, phone):
+        """Custom validator to check if phone already exists"""
+        # Clean the phone number for comparison
+        clean_phone = phone.data.replace(' ', '')
+        user = User.query.filter_by(phone_number=clean_phone).first()
+        if user:
+            raise ValidationError('Phone number already registered. Please choose a different one.')
 
 class LogoutForm(FlaskForm):
     # Field is optional; CSRF is what we need. A submit helps if you validate.

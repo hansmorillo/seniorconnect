@@ -2,16 +2,6 @@
 
 {% block styles %}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/register.css') }}">
-<style>
-/* login-only small bits (can move to a login.css later) */
-.oauth-btn{width:100%;display:flex;gap:10px;align-items:center;border:1px solid #e5e7eb;background:#fff;border-radius:10px;padding:10px 12px;font-weight:600;cursor:pointer}
-.oauth-btn img{width:18px;height:18px}
-.divider{display:flex;align-items:center;gap:12px;color:#6b7280;font-size:12px;margin:12px 0}
-.divider::before,.divider::after{content:"";height:1px;flex:1;background:#e5e7eb}
-.inline-row{display:flex;align-items:center;justify-content:space-between}
-.link-muted{color:#1f2937;font-size:14px;text-decoration:none}
-.link-muted:hover{text-decoration:underline}
-</style>
 {% endblock %}
 
 {% block content %}
@@ -44,14 +34,19 @@
         <label style="display:flex;gap:8px;align-items:center;font-size:14px;color:#374151;">
           {{ form.remember() }} {{ form.remember.label.text if form.remember.label else "Remember me" }}
         </label>
-        <a class="link-muted" href="#" aria-disabled="true">Forgot password</a>
       </div>
+
+      <!-- CAPTCHA -->
+      <div class="captcha-container">
+        {{ form.recaptcha }}
+      </div>
+      {% for e in form.recaptcha.errors %}<div class="error">{{ e }}</div>{% endfor %}
 
       {{ form.submit(class="btn btn-primary") }}
     </form>
 
     <p class="auth-footer">
-      Don’t have an account?
+      Don't have an account?
       <a href="{{ url_for('auth.register') }}">Sign up</a>
     </p>
   </div>

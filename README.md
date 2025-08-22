@@ -1,6 +1,6 @@
 # SeniorConnect
 
-SeniorConnect is a secure web application designed to help seniors engage with their community by discovering events, joining interest groups, and booking shared spaces. Built with Flask, MySQL, and Bootstrap, the application demonstrates good security practices aligned with the OWASP Top 10 (2019) vulnerabilities.
+SeniorConnect is a secure web application designed to help seniors engage with their community by discovering events, joining interest groups, and booking shared spaces. Built with Flask, MySQL, and Bootstrap, the application demonstrates good security practices aligned with the OWASP Top 10 (2021) vulnerabilities.
 
 ---
 
@@ -8,10 +8,11 @@ SeniorConnect is a secure web application designed to help seniors engage with t
 
 - **Frontend:** HTML, CSS, Bootstrap
 - **Backend:** Python Flask
-- **Database:** MySQL
-- **Authentication:** Flask-Login, Flask-Bcrypt
-- **Security Modules:** Flask-Limiter, Flask-WTF, Flask-Login
-- **Hosting:** Render Deployment in future
+- **Database & ORM:** MySQL (PyMySQL driver), SQLAlchemy + Flask-SQLAlchemy
+- **Forms & CSRF:** Flask-WTF, WTForms, ```email_validator```
+- **Auth & Security:** Flask‑Login (sessions), Flask‑Bcrypt/bcrypt (password hashing), Flask‑Limiter (rate limits), Flask‑Talisman (security headers/CSP), bleach (sanitize), secure cookies (HttpOnly/SameSite/Secure), ```itsdangerous``` (signed tokens), ```python‑dotenv``` (secrets)
+- **Email:** Flask-Mail (verification)
+- **Utilities:** ```cryptography, requests```
 
 ---
 
@@ -21,16 +22,18 @@ SeniorConnect is a secure web application designed to help seniors engage with t
 SeniorConnect/
 ├── app.py                  # Flask app entry point (uses create_app())
 ├── config.py               # DB and app configuration
-├── extensions.py           # Flask extensions (db, bcrypt, login_manager)
-├── models/                 # ORM-like Python classes
-├── routes/                 # All route Blueprints
-├── templates/              # HTML templates (Jinja2)
-├── static/                 # CSS, images, scripts
-├── db/                     # SQL schema and seed files
-├── forms/                  # Form folder to separate from routes and models
-├── uploads/                # Uploads folder to store images for events
+├── extensions.py           # Flask extensions (db, bcrypt, login_manager, limiter, etc.)
 ├── requirements.txt        # Python dependencies
 ├── .env                    # Secret keys and DB credentials (not committed)
+│
+├── db/                     # SQL schema and initial seed data
+├── forms/                  # Auth forms (register, login, logout)
+├── logs/                   # Audit logs
+├── models/                 # Database models (SQLAlchemy ORM)
+├── routes/                 # All route Blueprints (Flask views/controllers)
+├── static/                 # CSS, images, JavaScript
+├── templates/              # HTML templates (includes base.html)
+├── utils/                  # Utility functions (decorators, make_admin.py)
 └── README.md
 ```
 
@@ -39,52 +42,69 @@ SeniorConnect/
 ## 🌐 Available Routes (Blueprint-Based)
 
 ### 🔓 Guest Routes
+| Route                   | Description                          |
+|--------------------------|--------------------------------------|
+| `/`                     | Landing page                         |
+| `/register`             | Register new user (with reCAPTCHA)   |
+| `/verify-email/<token>` | Verify pending account via email link|
+| `/resend-verification`  | Resend verification email             |
+| `/login`                | Login page (with reCAPTCHA)          |
 
-| Route        | Description             |
-|--------------|-------------------------|
-| `/`          | Landing page            |
-| `/about`     | About Us page           |
-| `/login`     | Login page              |
-| `/register`  | Register new user       |
+---
 
 ### 🔒 Authenticated User Routes
-
-| Route                | Purpose                               |
-|----------------------|----------------------------------------|
-| `/events`            | View all community events             |
-| `/rsvp`              | RSVP to an event                      |
-| `/chat`              | Access group chat interface           |
-| `/groups`            | View/join interest groups             |
-| `/account`           | Manage account details                |
-| `/notifications`     | View system messages/reminders        |
-| `/feedback`          | Submit user feedback                  |
-| `/booking`           | Start booking process                 |
-| `/booking/select`    | Pick booking time/date/location       |
-| `/booking/manage`    | Manage or cancel existing bookings    |
-| `/logout`            | Log out of session                    |
+| Route/Group         | Purpose                                        |
+|---------------------|------------------------------------------------|
+| `/logout` (POST)    | Log out of session (CSRF-protected)            |
+| `/events`           | Browse events and RSVP/cancel attendance       |
+| `/account`          | Manage account details                         |
+| `/notifications/*`  | View, dismiss, mark all read, or clear all      |
+| `/feedback`         | Submit user feedback                           |
+| `/feedback/*` (Admin)| View or delete feedback (admin only)          |
+| `/dashboard`        | User dashboard                                 |
+| `/weather`          | Weather dashboard (Singapore) + `/weather-api` |
+| `/booking/*`        | Create, confirm, manage, update, or cancel bookings |
 
 ---
 
-## 🔐 Security Implementation
+###  System Routes
+| Route      | Purpose             |
+|------------|---------------------|
+| `/health`  | Health check (JSON) |
 
-SeniorConnect is built with security in mind, following OWASP Top 10 practices:
-
-| OWASP 2021 Risk                       | Implementation                                               |
-|--------------------------------------|--------------------------------------------------------------|
-| A01: Broken Access Control           | `@login_required`, role-based access planned                 |
-| A02: Cryptographic Failures          | `.env` for secrets, Bcrypt hashing, HTTPS-ready              |
-| A03: Injection                       | SQLAlchemy & parameterized queries                           |
-| A04: Insecure Design                 | Future role-based logic                                      |
-| A05: Security Misconfiguration       | Flask-Limiter, `debug=False` in production                   |
-| A07: Identification and Authentication Failures | Flask-Login + Flask-Bcrypt                     |
-| A08: Software and Data Integrity Failures | Secure deserialization planned for forms           |
-| A09: Security Logging and Monitoring Failures | Python `logging` module planned                    |
 
 ---
 
-## 🚀 Getting Started
+##  Security Implementation
 
-### 📦 Installation
+SeniorConnect is built with security in mind, following **OWASP Top 10 (2021)** practices:
+
+| OWASP 2021 Risk                       | Implementation                                                                 |
+|---------------------------------------|---------------------------------------------------------------------------------|
+| **A01: Broken Access Control**        | `@login_required` decorators, role-based access for admin routes, secure cookies|
+| **A02: Cryptographic Failures**       | `.env` for secrets, Flask-Bcrypt password hashing, HTTPS-ready deployment       |
+| **A03: Injection**                    | SQLAlchemy ORM with parameterized queries, Jinja2 auto-escaping                  |
+| **A04: Insecure Design**              | Defensive coding (CSRF on all forms, reCAPTCHA, rate limiting), admin-only decorators |
+| **A05: Security Misconfiguration**    | Flask-Talisman for security headers (CSP, HSTS, X-Frame-Options), Flask-Limiter, `debug=False` in production |
+| **A06: Vulnerable and Outdated Components** | Regular `pip-audit` / `pip list --outdated` checks, pinned versions in `requirements.txt` |
+| **A07: Identification & Authentication Failures** | Flask-Login for session management, bcrypt password hashing, verified email flow |
+| **A08: Software & Data Integrity Failures** | CSRF tokens via Flask-WTF, signed tokens (`itsdangerous`), email verification   |
+| **A09: Security Logging & Monitoring Failures** | Python `logging` + audit logs for bookings                            |
+| **A10: Server-Side Request Forgery (SSRF)** | Strict outbound calls (weather API only), environment variable API keys, timeout enforcement |
+
+
+ Additional measures:  
+- **Rate Limiting:** Flask-Limiter on sensitive endpoints (login, feedback, RSVP, bookings)  
+- **Input Sanitization:** `bleach` for user-generated content (feedback, events)  
+- **Cookie Security:** `HttpOnly`, `Secure`, `SameSite=Lax` set for all session cookies  
+- **reCAPTCHA:** Protects login/registration against bots  
+
+
+---
+
+##  Getting Started
+
+###  Installation
 
 1. Clone the repo:
     ```bash
@@ -110,40 +130,63 @@ SeniorConnect is built with security in mind, following OWASP Top 10 practices:
     DB_PASSWORD=password
     DB_HOST=localhost
     DB_NAME=seniorconnect
+
+    OPEN_WEATHER=open_weather_api_key
+
+    MAIL_SERVER=mail.server.com
+    MAIL_PORT=mail_port
+    MAIL_USE_TLS=True
+    MAIL_USE_SSL=False
+    MAIL_USERNAME=email_to_send_verification_email
+    MAIL_PASSWORD=mail_password
+    MAIL_DEFAULT_SENDER=default_email_to_send_verification_email
+
+    RECAPTCHA_PUBLIC_KEY=v2_public_key
+    RECAPTCHA_PRIVATE_KEY=v2_private_key
     ```
 
-5. Import the schema:
+5. Initialize the database:
     ```sql
-    SOURCE db/schema.sql;
-    SOURCE db/seed_data.sql;
+    SOURCE db/live_schema.sql;
+    SOURCE db/seed_data_seniorconnect.sql;
     ```
 
-### 🧪 Run the App
+###  Run the App
 
 ```bash
 python app.py
 ```
 
 This will launch the Flask server using the `create_app()` pattern.
+The app runs at https://127.0.0.1:5000/ by default.
 
 ---
 
 ## 📌 Completed Milestones
 
-- ✅ MySQL-backed login and user registration
-- ✅ Secure password hashing with Bcrypt
-- ✅ Blueprinted user routes and session management
-- ⏳ Role-based access for admins vs seniors (planned)
-- ⏳ Full calendar view for booking (planned)
+- ✅ MySQL-backed login, pending user flow, and email verification
+- ✅ Secure password hashing with Flask-Bcrypt
+- ✅ reCAPTCHA protection on login and registration
+- ✅ CSRF protection on all forms via Flask-WTF
+- ✅ Blueprinted routes for auth, events, bookings, and users
+- ✅ Session management with Flask-Login (secure cookies)
+- ✅ Notifications system (create, dismiss, mark-all-read, clear-all)
+- ✅ Event management with RSVP + notifications
+- ✅ Booking system with validation, manage/update/cancel, audit logs
+- ✅ User feedback submission with sanitization + admin feedback dashboard
+- ✅ Weather dashboard with external API integration (SG-only)
+- ✅ Role-based access control for admins vs seniors
 
 ---
 
-## 👨‍💻 Authors
+##  Authors
 
 - Hans Morillo
+- Royston Kee
+- Shavonne Tang
 
 ---
 
-## 📄 License
+##  License
 
 This project is intended for academic purposes and follows the submission guidelines for the Application Security Project IT2555.

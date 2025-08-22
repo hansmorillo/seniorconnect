@@ -118,6 +118,7 @@ def _check_password(user: User, plaintext: str) -> bool:
 # -----------------------------------------
 
 @auth.route("/register", methods=["GET", "POST"])
+@limiter.limit("5 per minute")  # Throttle brute-force attempts
 def register():
     # If the user is already logged in, bounce them “home”
     if getattr(current_user, "is_authenticated", False):
@@ -125,11 +126,28 @@ def register():
 
     form = RegisterForm()
 
-    if form.validate_on_submit():
-        display_name = _normalize(form.display_name.data)
-        email = _normalize(form.email.data).lower()
-        phone_field = getattr(form, "phone", None) or getattr(form, "phone_number", None)
-        phone = _normalize(phone_field.data) if phone_field else ""
+    if request.method == 'POST':
+        # 1) Require a reCAPTCHA response to even attempt validation
+        recaptcha_response = request.form.get('g-recaptcha-response')
+        if not recaptcha_response:
+            flash('Please complete the reCAPTCHA verification.', 'danger')
+            return render_template('register.html', form=form)
+
+        # 2) Validate full form (this will also validate RecaptchaField if present)
+        if not form.validate_on_submit():
+            # Keep the user on the same page; do NOT redirect
+            if 'recaptcha' in getattr(form, 'errors', {}):
+                flash('reCAPTCHA verification failed. Please try again.', 'danger')
+            else:
+                flash('Please fix the errors below.', 'danger')
+            return render_template('register.html', form=form)
+
+        # 3) Proceed with your pending-user flow
+        display_name = form.display_name.data
+        email = (form.email.data or '').strip().lower()
+        phone = (getattr(form, 'phone', None).data if hasattr(form, 'phone') else
+                 getattr(form, 'phone_number', None).data if hasattr(form, 'phone_number') else '')
+        phone = (phone or '').strip()
         password = form.password.data
 
         # 1) Hard-stop if verified user exists
@@ -195,7 +213,7 @@ def register():
             flash("We couldn't send a verification email. Please try again.", "danger")
             return render_template("register.html", form=form), 502
 
-    # GET or invalid POST
+    # GET (or any non-POST)
     return render_template("register.html", form=form)
 
 
@@ -244,6 +262,7 @@ def verify_email(token: str):
 
 
 @auth.route("/resend-verification", methods=["POST"])
+@limiter.limit("2 per minute")  # Throttle brute-force attempts
 def resend_verification():
     """
     Re-issue a verification email for an existing (non-expired) PendingUser.
@@ -287,11 +306,28 @@ def resend_verification():
 @auth.route("/login", methods=["GET", "POST"])
 @limiter.limit("5 per minute")  # Throttle brute-force attempts
 def login():
+    # Already logged in? Go home.
     if getattr(current_user, "is_authenticated", False):
         return redirect(url_for("home"))
 
     form = LoginForm()
-    if form.validate_on_submit():
+
+    if request.method == 'POST':
+        # 1) Require a reCAPTCHA response before attempting validation
+        recaptcha_response = request.form.get('g-recaptcha-response')
+        if not recaptcha_response:
+            flash('Please complete the reCAPTCHA verification.', 'danger')
+            return render_template('login.html', form=form)
+
+        # 2) Validate the form (this should also validate RecaptchaField if present)
+        if not form.validate_on_submit():
+            if 'recaptcha' in getattr(form, 'errors', {}):
+                flash('reCAPTCHA verification failed. Please try again.', 'danger')
+            else:
+                flash('Please check your login details.', 'danger')
+            return render_template('login.html', form=form)
+
+        # 3) Proceed with normal login flow
         email = _normalize(form.email.data).lower()
         password = form.password.data
         remember = bool(getattr(form, "remember", None) and form.remember.data)
@@ -299,33 +335,46 @@ def login():
         user = User.query.filter_by(email=email).first()
 
         if user and _check_password(user, password):
+            # Require verified account before login
             if not getattr(user, "is_verified", False):
-                # If you want: render a page that includes a "Resend verification" form posting to /resend-verification
                 flash("Please verify your email before signing in.", "warning")
                 return render_template("login.html", form=form), 403
 
-            # If you centrally configure REMEMBER_COOKIE_DURATION in app config,
-            # you can just pass `remember=remember`. Otherwise, you can pass a custom duration:
-            # login_user(user, remember=remember, duration=timedelta(days=30))
-            login_user(user, remember=remember)
+            # Respect app-level remember duration unless you explicitly pass one
+            login_user(user, remember=remember)  # or duration=timedelta(days=30)
             flash("Welcome back!", "success")
-            return redirect(url_for("home"))
 
-        # Not a verified user—check for pending
+            # Safe handling of ?next=
+            next_page = request.args.get("next")
+            try:
+                from urllib.parse import urlparse
+                if not next_page or urlparse(next_page).netloc != "":
+                    next_page = url_for("home")
+            except Exception:
+                next_page = url_for("home")
+
+            return redirect(next_page)
+
+        # Not a verified user—check if there’s a pending registration
         if PendingUser.query.filter_by(email=email).first():
             flash("We found a pending registration—please verify your email.", "info")
         else:
             flash("Invalid email or password.", "danger")
 
+        # Fall through to render the form again after flashing messages
+
+    # GET or re-render after POST
     return render_template("login.html", form=form)
+
 
 
 @auth.route("/logout", methods=["POST"])
 @login_required
+@limiter.limit("5 per minute")  # Throttle brute-force attempts
 def logout():
     form = LogoutForm()
     if not form.validate_on_submit():  # CSRF validation
         abort(400)
     logout_user()
-    flash("Logged out.", "success")
+    flash("Logged out successfully.", "success")
     return redirect(url_for("home"))

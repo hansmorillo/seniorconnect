@@ -1,5 +1,258 @@
 {% extends "base.html" %}
+
+{% block styles %}
+<style>
+  :root {
+    --brand:  #186FAF;
+    --brand-600:  #145c94;
+    --radius: 16px;
+  }
+
+  /* ---------- HERO ---------- */
+  .hero {
+    position: relative;
+    border-radius: var(--radius);
+    overflow: hidden;
+    box-shadow: 0 20px 50px rgba(2,6,23,.12);
+    background: #0b1220;
+  }
+  .hero::before {
+    content: "";
+    position: absolute; inset: 0;
+    background: linear-gradient(180deg, rgba(0,0,0,.45), rgba(0,0,0,.35));
+    z-index: 1;
+  }
+  .hero img {
+    width: 100%; height: 480px;
+    object-fit: cover; display: block;
+    filter: saturate(1.1);
+  }
+  .hero-content {
+    position: absolute; inset: 0; z-index: 2;
+    display: flex; align-items: center; justify-content: center;
+    text-align: center; color: #fff;
+    padding: clamp(1rem, 3vw, 3rem);
+  }
+  .hero h1 {
+    font-weight: 800; letter-spacing: .3px;
+  }
+
+  /* ---------- SECTION HEADINGS ---------- */
+  .section-title {
+    font-weight: 800; letter-spacing: .2px;
+  }
+
+  /* ---------- FEATURE CARDS ---------- */
+  .feature-card {
+    border: 0; border-radius: var(--radius);
+    overflow: hidden;
+    background: #fff;
+    box-shadow: 0 10px 30px rgba(2,6,23,.08);
+    transition: transform .25s ease, box-shadow .25s ease;
+  }
+  .feature-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 16px 40px rgba(2,6,23,.12);
+  }
+  .feature-card .thumb {
+    height: 160px; width: 100%; object-fit: cover;
+  }
+  .feature-card .card-body h5 {
+    font-weight: 700;
+  }
+
+  /* ---------- FEATURED IMAGE TILES ---------- */
+  .feature-tile {
+    border-radius: var(--radius);
+    overflow: hidden;
+    position: relative;
+    box-shadow: 0 12px 32px rgba(2,6,23,.12);
+  }
+  .feature-tile img {
+    width: 100%; height: 240px; object-fit: cover;
+    display: block;
+  }
+  .feature-tile .overlay {
+    position: absolute; inset: 0;
+    display: flex; flex-direction: column;
+    justify-content: flex-end;
+    padding: 1rem;
+    background: linear-gradient(180deg, rgba(0,0,0,0) 0%, rgba(0,0,0,.55) 75%);
+    color: #fff;
+  }
+  .feature-tile h5 {
+    margin: 0; font-weight: 700;
+  }
+  .feature-tile small {
+    opacity: .9;
+  }
+
+  /* ---------- FULL-BLEED CTA BAND ---------- */
+  .cta-wrap {
+    position: relative;
+    background: linear-gradient(135deg, var(--brand), var(--brand-600));
+    padding: 56px 0;
+    overflow: hidden;
+    box-shadow: 0 24px 60px rgba(2,6,23,.18);
+    border-radius: 40px;
+  }
+  .cta-wrap::after {
+    content: "";
+    position: absolute; inset: -20% -10% auto -10%;
+    height: 280px;
+    background: radial-gradient(50% 60% at 50% 50%, rgba(255,255,255,.22) 0%, rgba(255,255,255,0) 60%);
+    pointer-events: none;
+  }
+  .cta-content {
+    color: #fff;
+    max-width: 920px;
+    margin: 0 auto;
+    text-align: center;
+  }
+  .cta-content h2 {
+    font-weight: 800;
+    letter-spacing: .2px;
+  }
+  .cta-content p {
+    color: rgba(255,255,255,.9);
+    font-size: 1.1rem;
+  }
+  .cta-content .btn-light {
+    color: var(--brand-600) !important;
+    border: none;
+    box-shadow: 0 6px 16px rgba(0,0,0,.15);
+  }
+  .cta-content .btn-light:hover {
+    filter: brightness(0.97);
+  }
+  .cta-content .btn-outline-light {
+    border-width: 2px;
+  }
+  .cta-content .btn-outline-light:hover {
+    background: rgba(255,255,255,.15);
+  }
+
+  /* ---------- BADGES ---------- */
+  .pill {
+    display: inline-block;
+    padding: .35rem .6rem;
+    border-radius: 999px;
+    font-size: .8rem;
+    font-weight: 700;
+    background: #e8f3fb;
+    color: var(--brand);
+  }
+</style>
+
+{% endblock %}
+
 {% block content %}
-<h2>Welcome to SeniorConnect</h2>
-<p>This is the landing page for all users.</p>
+
+<!-- HERO (uses your static images) -->
+<section class="container my-4">
+  <div class="hero">
+    <!-- swap image if you prefer: booking-bg.jpg / auth-hero-2.jpg -->
+    <img src="{{ url_for('static', filename='images/auth-hero.jpg') }}" alt="Seniors enjoying community activities">
+    <div class="hero-content">
+      <div>
+        <span class="pill mb-3">Community • Activities • Support</span>
+        <h1 class="display-4 mb-3">Welcome to SeniorConnect</h1>
+        <p class="lead mb-4">Connect with others, discover activities, and stay engaged — all in one place.</p>
+
+        {% if not current_user.is_authenticated %}
+          <a href="{{ url_for('auth.register') }}" class="btn btn-light btn-lg me-2">Join Free</a>
+          <a href="{{ url_for('auth.login') }}" class="btn btn-outline-light btn-lg">Log In</a>
+        {% else %}
+          <a href="{{ url_for('event.events') }}" class="btn btn-light btn-lg">Explore Events</a>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- FEATURE STRIP (photo cards) -->
+<section class="container py-5">
+  <h2 class="text-center section-title mb-4">What you can do on SeniorConnect</h2>
+  <p class="text-center text-muted mb-5">A few highlights from our most popular activities.</p>
+
+  <div class="row g-4">
+    <!-- Events -->
+    <div class="col-md-6">
+      <div class="card feature-card h-100">
+        <img class="thumb" style="height:240px; width:100%; object-fit:cover;"
+             src="{{ url_for('static', filename='images/event_images/health_talk_event.jpg') }}"
+             alt="Health Talk">
+        <div class="card-body">
+          <h5 class="card-title">Discover & RSVP Events</h5>
+          <p class="card-text">Talks, workshops, and meetups tailored for seniors.</p>
+          <a href="{{ url_for('event.events') }}" class="stretched-link">Browse events</a>
+        </div>
+      </div>
+    </div>
+
+    <!-- Facilities -->
+    <div class="col-md-6">
+      <div class="card feature-card h-100">
+        <img class="thumb" style="height:240px; width:100%; object-fit:cover;"
+             src="{{ url_for('static', filename='images/function_room.jpg') }}"
+             alt="Function Room">
+        <div class="card-body">
+          <h5 class="card-title">Book Facilities</h5>
+          <p class="card-text">Reserve rooms and spaces for your activities.</p>
+          <a href="{{ url_for('booking.booking_main') }}" class="stretched-link">Start a booking</a>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+
+<!-- “Featured Right Now” (banner tiles with overlay text) -->
+<section class="container py-4">
+  <div class="row g-4">
+    <div class="col-md-6">
+      <div class="feature-card position-relative">
+        <img class="thumb" style="height:240px"
+             src="{{ url_for('static', filename='images/event_images/digital_skills.jpg') }}"
+             alt="Digital skills workshop">
+        <div class="position-absolute bottom-0 start-0 end-0 p-3"
+             style="background:linear-gradient(180deg, rgba(0,0,0,0) 0%, rgba(0,0,0,.55) 75%); color:#fff;">
+          <h5 class="m-0">Digital Skills Workshop</h5>
+          <small>Learn WhatsApp safety, online payments & more</small>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-6">
+        <div class="feature-card position-relative">
+            <img class="thumb" style="height:240px"
+                src="{{ url_for('static', filename='images/event_images/health_talk_event.jpg') }}"
+                alt="Health Talk Event">
+            <div class="position-absolute bottom-0 start-0 end-0 p-3"
+                style="background:linear-gradient(180deg, rgba(0,0,0,0) 0%, rgba(0,0,0,.55) 75%); color:#fff;">
+            <h5 class="m-0">Community Health Talk</h5>
+            <small>Learn tips on wellness, nutrition, and staying active</small>
+            </div>
+        </div>
+    </div>
+  </div>
+</section>
+
+<!-- CTA (full-bleed band) -->
+<section class="cta-wrap my-5">
+  <div class="container">
+    <div class="cta-content text-center">
+      <h2 class="mb-2">Ready to connect?</h2>
+      <p class="mb-4">Join today and discover activities near you.</p>
+
+      {% if not current_user.is_authenticated %}
+        <a href="{{ url_for('auth.register') }}" class="btn btn-light btn-lg me-2">Create an account</a>
+        <a href="{{ url_for('auth.login') }}" class="btn btn-outline-light btn-lg">Log in</a>
+      {% else %}
+        <a href="{{ url_for('event.events') }}" class="btn btn-light btn-lg">Explore events</a>
+      {% endif %}
+    </div>
+  </div>
+</section>
+
+
 {% endblock %}

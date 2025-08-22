@@ -1,19 +1,19 @@
 /* ---------- Split Auth Layout (standardised to booking tokens) ---------- */
-:root{
-  /* Pull from booking tokens; keep local fallbacks for safety */
-  --bg: var(--bg, #f7f8fb);
-  --text: var(--text, #111827);
-  --muted: var(--muted, #6b7280);
-  --border: var(--border, #e5e7eb);
+:root {
+  --bg: #f7f8fb;
+  --text: #111827;
+  --muted: #6b7280;
+  --border: #e5e7eb;
 
   /* Brand aligns with bookings */
-  --brand: var(--brand, #186FAF);
-  --brand-600: var(--brand-600, #145c94);
+  --brand: #186FAF;        /* Primary */
+  --brand-600: #145c94;    /* Darker shade */
 
-  --ring: rgba(24, 111, 175, .18);          /* focus glow derived from brand */
-  --radius: var(--radius, 12px);
-  --shadow: var(--shadow-lg, 0 10px 30px rgba(2, 6, 23, .08));
+  --ring: rgba(24, 111, 175, .18);
+  --radius: 12px;
+  --shadow: 0 10px 30px rgba(2, 6, 23, .08);
 }
+
 
 /* Page container sits full width but centers the card */
 .split-auth{

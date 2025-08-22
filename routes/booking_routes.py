@@ -194,6 +194,7 @@ def _is_within_24h(booking_obj):
 
 @booking.route('/', methods=["GET", "POST"])
 @login_required
+@limiter.limit("5 per minute")  # Throttle brute-force attempts
 def booking_main():
     token = generate_csrf()
     return render_template('booking.html', csrf_token=token)
@@ -498,6 +499,7 @@ def booking_success():
 
 @booking.route('/manage')
 @login_required
+@limiter.limit("10 per minute")  # Throttle brute-force attempts
 def booking_manage():
     """Display user's bookings - both upcoming and past"""
     try:
@@ -592,6 +594,7 @@ def cleanup_past_bookings():
 
 @booking.route('/get-booking/<booking_id>')
 @login_required
+@limiter.limit("5 per minute")  # Throttle brute-force attempts
 def get_booking(booking_id):
     """Get booking details for editing/viewing"""
     try:

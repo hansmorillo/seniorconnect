@@ -9,7 +9,7 @@
 
     {% block styles %}{% endblock %}
 </head>
-
+<script src="https://www.google.com/recaptcha/api.js?onload=onRecaptchaLoad&render=explicit" async defer></script>
 <body>
     <nav class="navbar navbar-expand-lg navbar-dark bg-dark sticky-top shadow-sm main-navbar mb-4">
         <div class="container-fluid">
@@ -38,6 +38,18 @@
                     Feedback
                     </a>
                 </li>
+                
+                {# 🔒 ADMIN ONLY: Show Feedback Display button only for admins #}
+                {% if current_user.is_admin %}
+                <li class="nav-item">
+                    <a class="nav-link {{ 'active' if request.endpoint == 'user.feedback_display' else '' }} admin-nav-item"
+                    aria-current="{{ 'page' if request.endpoint == 'user.feedback_display' else 'false' }}"
+                    href="{{ url_for('user.feedback_display') }}">
+                    <i class="fas fa-chart-line me-1"></i>Feedback Display
+                    </a>
+                </li>
+                {% endif %}
+                
                 <li class="nav-item">
                     <a class="nav-link {{ 'active' if request.endpoint == 'user.notifications' else '' }}"
                     aria-current="{{ 'page' if request.endpoint == 'user.notifications' else 'false' }}"
@@ -107,7 +119,7 @@
 
 
     <div class="container">
-        <!-- 🔐 Flash messages display here -->
+        <!-- 📢 Flash messages display here -->
         {% with messages = get_flashed_messages(with_categories=true) %}
         {% if messages %}
         {% for category, message in messages %}
@@ -121,9 +133,44 @@
 
         {% block content %}{% endblock %}
     </div>
-    <!-- Bootstrap JS Bundle with Popper (required for dismissible alerts) -->
+    
+    <style>
+        /* Admin navigation item styling */
+        .admin-nav-item {
+            background: linear-gradient(135deg, #ff6b35 0%, #f7931e 100%);
+            border-radius: 6px;
+            color: #ffffff !important;
+            font-weight: 600;
+            padding: 0.5rem 1rem !important;
+            transition: all 0.3s ease;
+        }
+        
+        .admin-nav-item:hover {
+            background: linear-gradient(135deg, #e55a2b 0%, #e8821a 100%);
+            transform: translateY(-1px);
+            box-shadow: 0 4px 8px rgba(255, 107, 53, 0.3);
+        }
+        
+        .admin-nav-item.active {
+            background: linear-gradient(135deg, #d64d22 0%, #d97316 100%);
+            box-shadow: 0 2px 4px rgba(255, 107, 53, 0.5);
+        }
+    </style>
+    
+    <!-- Bootstrap JS Bundle with Popper -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"
-        integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz"
-        crossorigin="anonymous"></script>
+            integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz"
+            crossorigin="anonymous"></script>
+
+    <!-- Global reCAPTCHA callback functions -->
+    <script>
+    function onRecaptchaLoad() {
+        console.log('reCAPTCHA API loaded successfully');
+        // Auto-render reCAPTCHA widgets if they exist
+        if (typeof grecaptcha !== 'undefined' && document.querySelector('.g-recaptcha')) {
+            console.log('Auto-rendering reCAPTCHA widgets');
+        }
+    }
+    </script>
 </body>
 </html>

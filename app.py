@@ -36,6 +36,27 @@ def create_app(test_config=None):
     app.config['MAIL_PASSWORD'] = os.getenv('MAIL_PASSWORD')
     app.config['MAIL_DEFAULT_SENDER'] = os.getenv('MAIL_DEFAULT_SENDER', app.config['MAIL_USERNAME'])
 
+    # ---------- Mail Configuration ----------
+    app.config['MAIL_SERVER'] = os.getenv('MAIL_SERVER', 'smtp.gmail.com')
+    app.config['MAIL_PORT'] = int(os.getenv('MAIL_PORT', '587'))
+    app.config['MAIL_USE_TLS'] = os.getenv('MAIL_USE_TLS', 'True').lower() == 'true'
+    app.config['MAIL_USE_SSL'] = os.getenv('MAIL_USE_SSL', 'False').lower() == 'true'
+    app.config['MAIL_USERNAME'] = os.getenv('MAIL_USERNAME')
+    app.config['MAIL_PASSWORD'] = os.getenv('MAIL_PASSWORD')
+    app.config['MAIL_DEFAULT_SENDER'] = os.getenv('MAIL_DEFAULT_SENDER', app.config['MAIL_USERNAME'])
+
+    # reCAPTCHA Configuration
+    app.config['RECAPTCHA_PUBLIC_KEY'] = os.getenv('RECAPTCHA_PUBLIC_KEY')
+    app.config['RECAPTCHA_PRIVATE_KEY'] = os.getenv('RECAPTCHA_PRIVATE_KEY')
+    app.config['RECAPTCHA_USE_SSL'] = True
+    app.config['RECAPTCHA_OPTIONS'] = {'theme': 'light'}
+    app.config['RECAPTCHA_VERIFY_URL'] = 'https://www.google.com/recaptcha/api/siteverify'
+
+    # Verify keys are present
+    if not app.config['RECAPTCHA_PUBLIC_KEY'] or not app.config['RECAPTCHA_PRIVATE_KEY']:
+        raise ValueError("reCAPTCHA keys not configured")
+    
+
     # ---------- Initialize Extensions ----------
     db.init_app(app)
     bcrypt.init_app(app)
@@ -119,8 +140,8 @@ def create_app(test_config=None):
                              description=e.description), 429
 
     return app
-
+            
 # ---------- Run App ----------
 if __name__ == '__main__':
     app = create_app()
-    app.run(debug=True)
+    app.run(debug=False)
