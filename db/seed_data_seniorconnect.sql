@@ -29,13 +29,16 @@ VALUES
 ('33333333-3333-3333-3333-333333333333', 'Function Room', '123 Main St', 'Air-conditioned multipurpose room', 'Community', 50, 1),
 ('44444444-4444-4444-4444-444444444444', 'Sports Hall', '456 Park Ave', 'Indoor sports hall with seating', 'Sports', 200, 1);
 
+
 -- ---------------------------------------------------------
 -- Events
 -- ---------------------------------------------------------
-INSERT INTO events (id, name, description, date_time, location, organizer_id, is_verified)
+INSERT INTO events (id, name, description, date_time, location, image_url, organizer_id, is_verified)
 VALUES
-('55555555-5555-5555-5555-555555555555', 'Yoga for Seniors', 'Gentle yoga session suitable for all levels', '2025-09-01 10:00:00', 'Function Room', '11111111-1111-1111-1111-111111111111', 1),
-('66666666-6666-6666-6666-666666666666', 'Community Chess Meetup', 'Casual chess games for enthusiasts', '2025-09-02 14:00:00', 'Sports Hall', '11111111-1111-1111-1111-111111111111', 1);
+('11111111-1111-1111-1111-111111111111', 'Community Health Talk', 'A session on healthy aging tips and preventive care.', '2025-09-01 10:00:00', 'Community Hall A', 'images/event_images/health_talk_event.jpg', NULL, 0),
+('22222222-2222-2222-2222-222222222222', 'Senior Yoga Class', 'Gentle yoga session tailored for seniors. Bring your own mat.', '2025-09-05 09:30:00', 'Wellness Center Room 2', 'images/event_images/senior_yoga.jpg', NULL, 0),
+('33333333-3333-3333-3333-333333333333', 'Digital Skills Workshop', 'Learn how to use smartphones and apps to stay connected.', '2025-09-10 14:00:00', 'Library Computer Lab', 'images/event_images/digital_skills.jpg', NULL, 0);
+
 
 -- ---------------------------------------------------------
 -- RSVPs
