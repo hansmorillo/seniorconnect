@@ -145,6 +145,8 @@ SeniorConnect is built with security in mind, following **OWASP Top 10 (2021)** 
     RECAPTCHA_PRIVATE_KEY=v2_private_key
     ```
 
+    Feel free to reach out to me at hansmorillo07@gmail.com for credentials to test the application.
+
 5. Initialize the database:
     ```sql
     SOURCE db/live_schema.sql;
